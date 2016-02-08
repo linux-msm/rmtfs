@@ -9,6 +9,9 @@ OBJS := $(SRCS:.c=.o)
 $(OUT): $(OBJS)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
+%.c: %.qmi
+	qmic < $<
+
 test: $(OUT)
 	./$(OUT)
 

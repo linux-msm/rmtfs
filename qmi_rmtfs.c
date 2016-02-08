@@ -4,12 +4,12 @@
 
 struct rmtfs_open_req *rmtfs_open_req_alloc(unsigned txn)
 {
-	return (struct rmtfs_open_req*)qmi_tlv_init(txn, 1);
+	return (struct rmtfs_open_req*)qmi_tlv_init(txn, 1, 0);
 }
 
 struct rmtfs_open_req *rmtfs_open_req_parse(void *buf, size_t len, unsigned *txn)
 {
-	return (struct rmtfs_open_req*)qmi_tlv_decode(buf, len, txn);
+	return (struct rmtfs_open_req*)qmi_tlv_decode(buf, len, txn, 0);
 }
 
 void *rmtfs_open_req_encode(struct rmtfs_open_req *open_req, size_t *len)
@@ -46,12 +46,12 @@ int rmtfs_open_req_get_path(struct rmtfs_open_req *open_req, char *buf, size_t b
 
 struct rmtfs_open_resp *rmtfs_open_resp_alloc(unsigned txn)
 {
-	return (struct rmtfs_open_resp*)qmi_tlv_init(txn, 1);
+	return (struct rmtfs_open_resp*)qmi_tlv_init(txn, 1, 2);
 }
 
 struct rmtfs_open_resp *rmtfs_open_resp_parse(void *buf, size_t len, unsigned *txn)
 {
-	return (struct rmtfs_open_resp*)qmi_tlv_decode(buf, len, txn);
+	return (struct rmtfs_open_resp*)qmi_tlv_decode(buf, len, txn, 2);
 }
 
 void *rmtfs_open_resp_encode(struct rmtfs_open_resp *open_resp, size_t *len)
@@ -107,12 +107,12 @@ int rmtfs_open_resp_get_caller_id(struct rmtfs_open_resp *open_resp, uint32_t *v
 
 struct rmtfs_close_req *rmtfs_close_req_alloc(unsigned txn)
 {
-	return (struct rmtfs_close_req*)qmi_tlv_init(txn, 2);
+	return (struct rmtfs_close_req*)qmi_tlv_init(txn, 2, 0);
 }
 
 struct rmtfs_close_req *rmtfs_close_req_parse(void *buf, size_t len, unsigned *txn)
 {
-	return (struct rmtfs_close_req*)qmi_tlv_decode(buf, len, txn);
+	return (struct rmtfs_close_req*)qmi_tlv_decode(buf, len, txn, 0);
 }
 
 void *rmtfs_close_req_encode(struct rmtfs_close_req *close_req, size_t *len)
@@ -148,12 +148,12 @@ int rmtfs_close_req_get_caller_id(struct rmtfs_close_req *close_req, uint32_t *v
 
 struct rmtfs_close_resp *rmtfs_close_resp_alloc(unsigned txn)
 {
-	return (struct rmtfs_close_resp*)qmi_tlv_init(txn, 2);
+	return (struct rmtfs_close_resp*)qmi_tlv_init(txn, 2, 2);
 }
 
 struct rmtfs_close_resp *rmtfs_close_resp_parse(void *buf, size_t len, unsigned *txn)
 {
-	return (struct rmtfs_close_resp*)qmi_tlv_decode(buf, len, txn);
+	return (struct rmtfs_close_resp*)qmi_tlv_decode(buf, len, txn, 2);
 }
 
 void *rmtfs_close_resp_encode(struct rmtfs_close_resp *close_resp, size_t *len)
@@ -188,12 +188,12 @@ struct rmtfs_qmi_result *rmtfs_close_resp_get_result(struct rmtfs_close_resp *cl
 
 struct rmtfs_iovec_req *rmtfs_iovec_req_alloc(unsigned txn)
 {
-	return (struct rmtfs_iovec_req*)qmi_tlv_init(txn, 3);
+	return (struct rmtfs_iovec_req*)qmi_tlv_init(txn, 3, 0);
 }
 
 struct rmtfs_iovec_req *rmtfs_iovec_req_parse(void *buf, size_t len, unsigned *txn)
 {
-	return (struct rmtfs_iovec_req*)qmi_tlv_decode(buf, len, txn);
+	return (struct rmtfs_iovec_req*)qmi_tlv_decode(buf, len, txn, 0);
 }
 
 void *rmtfs_iovec_req_encode(struct rmtfs_iovec_req *iovec_req, size_t *len)
@@ -293,12 +293,12 @@ int rmtfs_iovec_req_get_is_force_sync(struct rmtfs_iovec_req *iovec_req, uint8_t
 
 struct rmtfs_iovec_resp *rmtfs_iovec_resp_alloc(unsigned txn)
 {
-	return (struct rmtfs_iovec_resp*)qmi_tlv_init(txn, 3);
+	return (struct rmtfs_iovec_resp*)qmi_tlv_init(txn, 3, 2);
 }
 
 struct rmtfs_iovec_resp *rmtfs_iovec_resp_parse(void *buf, size_t len, unsigned *txn)
 {
-	return (struct rmtfs_iovec_resp*)qmi_tlv_decode(buf, len, txn);
+	return (struct rmtfs_iovec_resp*)qmi_tlv_decode(buf, len, txn, 2);
 }
 
 void *rmtfs_iovec_resp_encode(struct rmtfs_iovec_resp *iovec_resp, size_t *len)
@@ -333,12 +333,12 @@ struct rmtfs_qmi_result *rmtfs_iovec_resp_get_result(struct rmtfs_iovec_resp *io
 
 struct rmtfs_alloc_buf_req *rmtfs_alloc_buf_req_alloc(unsigned txn)
 {
-	return (struct rmtfs_alloc_buf_req*)qmi_tlv_init(txn, 4);
+	return (struct rmtfs_alloc_buf_req*)qmi_tlv_init(txn, 4, 0);
 }
 
 struct rmtfs_alloc_buf_req *rmtfs_alloc_buf_req_parse(void *buf, size_t len, unsigned *txn)
 {
-	return (struct rmtfs_alloc_buf_req*)qmi_tlv_decode(buf, len, txn);
+	return (struct rmtfs_alloc_buf_req*)qmi_tlv_decode(buf, len, txn, 0);
 }
 
 void *rmtfs_alloc_buf_req_encode(struct rmtfs_alloc_buf_req *alloc_buf_req, size_t *len)
@@ -395,12 +395,12 @@ int rmtfs_alloc_buf_req_get_buff_size(struct rmtfs_alloc_buf_req *alloc_buf_req,
 
 struct rmtfs_alloc_buf_resp *rmtfs_alloc_buf_resp_alloc(unsigned txn)
 {
-	return (struct rmtfs_alloc_buf_resp*)qmi_tlv_init(txn, 4);
+	return (struct rmtfs_alloc_buf_resp*)qmi_tlv_init(txn, 4, 2);
 }
 
 struct rmtfs_alloc_buf_resp *rmtfs_alloc_buf_resp_parse(void *buf, size_t len, unsigned *txn)
 {
-	return (struct rmtfs_alloc_buf_resp*)qmi_tlv_decode(buf, len, txn);
+	return (struct rmtfs_alloc_buf_resp*)qmi_tlv_decode(buf, len, txn, 2);
 }
 
 void *rmtfs_alloc_buf_resp_encode(struct rmtfs_alloc_buf_resp *alloc_buf_resp, size_t *len)
@@ -456,12 +456,12 @@ int rmtfs_alloc_buf_resp_get_buff_address(struct rmtfs_alloc_buf_resp *alloc_buf
 
 struct rmtfs_dev_error_req *rmtfs_dev_error_req_alloc(unsigned txn)
 {
-	return (struct rmtfs_dev_error_req*)qmi_tlv_init(txn, 5);
+	return (struct rmtfs_dev_error_req*)qmi_tlv_init(txn, 5, 0);
 }
 
 struct rmtfs_dev_error_req *rmtfs_dev_error_req_parse(void *buf, size_t len, unsigned *txn)
 {
-	return (struct rmtfs_dev_error_req*)qmi_tlv_decode(buf, len, txn);
+	return (struct rmtfs_dev_error_req*)qmi_tlv_decode(buf, len, txn, 0);
 }
 
 void *rmtfs_dev_error_req_encode(struct rmtfs_dev_error_req *dev_error_req, size_t *len)
@@ -497,12 +497,12 @@ int rmtfs_dev_error_req_get_caller_id(struct rmtfs_dev_error_req *dev_error_req,
 
 struct rmtfs_dev_error_resp *rmtfs_dev_error_resp_alloc(unsigned txn)
 {
-	return (struct rmtfs_dev_error_resp*)qmi_tlv_init(txn, 5);
+	return (struct rmtfs_dev_error_resp*)qmi_tlv_init(txn, 5, 2);
 }
 
 struct rmtfs_dev_error_resp *rmtfs_dev_error_resp_parse(void *buf, size_t len, unsigned *txn)
 {
-	return (struct rmtfs_dev_error_resp*)qmi_tlv_decode(buf, len, txn);
+	return (struct rmtfs_dev_error_resp*)qmi_tlv_decode(buf, len, txn, 2);
 }
 
 void *rmtfs_dev_error_resp_encode(struct rmtfs_dev_error_resp *dev_error_resp, size_t *len)
@@ -558,12 +558,12 @@ int rmtfs_dev_error_resp_get_status(struct rmtfs_dev_error_resp *dev_error_resp,
 
 struct rmtfs_force_sync *rmtfs_force_sync_alloc(unsigned txn)
 {
-	return (struct rmtfs_force_sync*)qmi_tlv_init(txn, 6);
+	return (struct rmtfs_force_sync*)qmi_tlv_init(txn, 6, 4);
 }
 
 struct rmtfs_force_sync *rmtfs_force_sync_parse(void *buf, size_t len, unsigned *txn)
 {
-	return (struct rmtfs_force_sync*)qmi_tlv_decode(buf, len, txn);
+	return (struct rmtfs_force_sync*)qmi_tlv_decode(buf, len, txn, 4);
 }
 
 void *rmtfs_force_sync_encode(struct rmtfs_force_sync *force_sync, size_t *len)

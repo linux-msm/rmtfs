@@ -6,10 +6,6 @@
 
 #include "qmi_rmtfs.h"
 
-#define QMI_PKT_TYPE_REQUEST	0
-#define QMI_PKT_TYPE_RESPONSE	2
-#define QMI_PKT_TYPE_CONTROL	4
-
 struct qmi_packet {
 	uint8_t flags;
 	uint16_t txn_id;
@@ -31,7 +27,7 @@ struct qmi_tlv_item {
 	uint8_t data[];
 } __attribute__((__packed__));
 
-struct qmi_tlv *qmi_tlv_init(unsigned txn, unsigned msg_id)
+struct qmi_tlv *qmi_tlv_init(unsigned txn, unsigned msg_id, unsigned msg_type)
 {
 	struct qmi_packet *pkt;
 	struct qmi_tlv *tlv;
@@ -44,7 +40,7 @@ struct qmi_tlv *qmi_tlv_init(unsigned txn, unsigned msg_id)
 	tlv->buf = tlv->allocated;
 
 	pkt = tlv->buf;
-	pkt->flags = QMI_PKT_TYPE_RESPONSE;
+	pkt->flags = msg_type;
 	pkt->txn_id = txn;
 	pkt->msg_id = msg_id;
 	pkt->msg_len = 0;
@@ -52,10 +48,13 @@ struct qmi_tlv *qmi_tlv_init(unsigned txn, unsigned msg_id)
 	return tlv;
 }
 
-struct qmi_tlv *qmi_tlv_decode(void *buf, size_t len, unsigned *txn)
+struct qmi_tlv *qmi_tlv_decode(void *buf, size_t len, unsigned *txn, unsigned msg_type)
 {
 	struct qmi_packet *pkt = buf;
 	struct qmi_tlv *tlv;
+
+	if (pkt->flags != msg_type)
+		return NULL;
 
 	tlv = malloc(sizeof(struct qmi_tlv));
 	memset(tlv, 0, sizeof(struct qmi_tlv));

@@ -62,11 +62,11 @@ static void rmtfs_open(int sock, unsigned node, unsigned port, void *msg, size_t
 	struct rmtfs_qmi_result result = {};
 	struct rmtfs_open_resp *resp;
 	struct rmtfs_open_req *req;
-	int caller_id;
+	int caller_id = -1;
 	unsigned txn;
 	size_t len;
 	void *ptr;
-	char path[256];
+	char path[256] = {};
 	int ret;
 
 	req = rmtfs_open_req_parse(msg, msg_len, &txn);

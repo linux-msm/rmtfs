@@ -25,53 +25,53 @@ struct iovec_entry {
 	u32 num_sector;
 };
 
-message open_req {
+request open_req {
 	required string path = 1;
 } = 1;
 
-message open_resp {
+response open_resp {
 	required qmi_result result = 2;
 	optional u32 caller_id = 0x10;
 } = 1;
 
-message close_req {
+request close_req {
 	required u32 caller_id = 1;
 } = 2;
 
-message close_resp {
+response close_resp {
 	required qmi_result result = 2;
 } = 2;
 
-message iovec_req {
+request iovec_req {
 	required u32 caller_id = 1;
 	required u8 direction = 2;
 	required iovec_entry iovec[] = 3;
 	required u8 is_force_sync = 4;
 } = 3;
 
-message iovec_resp {
+response iovec_resp {
 	required qmi_result result = 2;
 } = 3;
 
-message alloc_buf_req {
+request alloc_buf_req {
 	required u32 caller_id = 1;
 	required u32 buff_size = 2;
 } = 4;
 
-message alloc_buf_resp {
+response alloc_buf_resp {
 	required qmi_result result = 2;
 	optional u64 buff_address = 0x10;
 } = 4;
 
-message dev_error_req {
+request dev_error_req {
 	required u32 caller_id = 1;
 } = 5;
 
-message dev_error_resp {
+response dev_error_resp {
 	required qmi_result result = 2;
 	optional u8 status = 0x10;
 } = 5;
 
-message force_sync {
+indication force_sync {
 	required u32 caller_id[] = 1;
 } = 6;
