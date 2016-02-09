@@ -24,6 +24,7 @@ struct caller {
 static const struct partition partition_table[] = {
 	{ "/boot/modem_fs1", "/boot/modem_fs1" },
 	{ "/boot/modem_fs2", "/boot/modem_fs2" },
+	{ "/boot/modem_fsc", "/boot/modem_fsc" },
 	{ "/boot/modem_fsg", "/boot/modem_fsg" },
 	{}
 };
