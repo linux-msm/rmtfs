@@ -15,7 +15,6 @@ static int rmtfs_mem_enumerate(void);
 static uint64_t rmtfs_mem_address;
 static uint64_t rmtfs_mem_size;
 static void *rmtfs_mem_base;
-static bool rmtfs_mem_busy;
 static int rmtfs_mem_fd;
 
 int rmtfs_mem_open(void)
@@ -48,11 +47,6 @@ int rmtfs_mem_open(void)
 
 int64_t rmtfs_mem_alloc(size_t alloc_size)
 {
-	if (rmtfs_mem_busy) {
-		fprintf(stderr, "[RMTFS] rmtfs shared memory already allocated\n");
-		return -EBUSY;
-	}
-
 	if (alloc_size > rmtfs_mem_size) {
 		fprintf(stderr,
 			"[RMTFS] rmtfs shared memory not large enough for allocation request 0x%zx vs 0x%lx\n",
@@ -60,14 +54,11 @@ int64_t rmtfs_mem_alloc(size_t alloc_size)
 		return -EINVAL;
 	}
 
-	rmtfs_mem_busy = true;
-
 	return rmtfs_mem_address;
 }
 
 void rmtfs_mem_free(void)
 {
-	rmtfs_mem_busy = false;
 }
 
 void *rmtfs_mem_ptr(unsigned phys_address, size_t len)
