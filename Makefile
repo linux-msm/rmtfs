@@ -1,6 +1,6 @@
 OUT := rmtfs
 
-CFLAGS := -Wall -g -I../qrtr/lib
+CFLAGS := -Wall -g -I../qrtr/lib -O2
 LDFLAGS := -L../qrtr -lqrtr
 prefix := /usr/local
 
