@@ -19,6 +19,7 @@ struct caller {
 	unsigned node;
 	int fd;
 	unsigned dev_error;
+	const struct partition *partition;
 };
 
 static const struct partition partition_table[] = {
@@ -46,7 +47,7 @@ int storage_open(void)
 int storage_get(unsigned node, const char *path)
 {
 	const struct partition *part;
-	struct caller *caller;
+	struct caller *caller = NULL;
 	int saved_errno;
 	int fd;
 	int i;
@@ -60,6 +61,14 @@ int storage_get(unsigned node, const char *path)
 	return -EPERM;
 
 found:
+	/* Check if this node already has the requested path open */
+	for (i = 0; i < MAX_CALLERS; i++) {
+		if (caller_handles[i].fd != -1 &&
+		    caller_handles[i].node == node &&
+		    caller_handles[i].partition == part)
+			return caller_handles[i].id;
+	}
+
 	for (i = 0; i < MAX_CALLERS; i++) {
 		if (caller_handles[i].fd == -1) {
 			caller = &caller_handles[i];
@@ -81,6 +90,7 @@ found:
 
 	caller->node = node;
 	caller->fd = fd;
+	caller->partition = part;
 
 	return caller->id;
 }
@@ -98,6 +108,8 @@ int storage_put(unsigned node, int caller_id)
 
 	close(caller->fd);
 	caller->fd = -1;
+	caller->partition = NULL;
+
 	return 0;
 }
 
