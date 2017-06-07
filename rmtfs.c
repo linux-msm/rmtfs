@@ -378,8 +378,9 @@ static int handle_rfsa(int sock)
 		return ret;
 	}
 
-	printf("[RFSA] packet; from: %d:%d\n", sq.sq_node, sq.sq_port);
-	print_hex_dump("[RFSA <-]", buf, ret);
+	dbgprintf("[RFSA] packet; from: %d:%d\n", sq.sq_node, sq.sq_port);
+	if (dbgprintf_enabled)
+		print_hex_dump("[RFSA <-]", buf, ret);
 
 	return 0;
 }
