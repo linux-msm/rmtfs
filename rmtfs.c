@@ -455,13 +455,13 @@ int main(int argc, char **argv)
 		goto close_rmtfs_mem;
 	}
 
-	rfsa_fd = qrtr_open(0);
+	rfsa_fd = qrtr_open(RFSA_QMI_SERVICE);
 	if (rfsa_fd < 0) {
 		fprintf(stderr, "failed to create qrtr socket");
 		goto close_storage;
 	}
 
-	rmtfs_fd = qrtr_open(0);
+	rmtfs_fd = qrtr_open(RMTFS_QMI_SERVICE);
 	if (rmtfs_fd < 0) {
 		fprintf(stderr, "failed to create qrtr socket");
 		goto close_storage;
