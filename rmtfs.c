@@ -374,7 +374,9 @@ static int handle_rfsa(int sock)
 	sl = sizeof(sq);
 	ret = recvfrom(sock, buf, sizeof(buf), 0, (void *)&sq, &sl);
 	if (ret < 0) {
-		fprintf(stderr, "[RMTFS] recvfrom failed: %d\n", ret);
+		ret = -errno;
+		if (ret != -ENETRESET)
+			fprintf(stderr, "[RFSA] recvfrom failed: %d\n", ret);
 		return ret;
 	}
 
@@ -415,7 +417,9 @@ static int handle_rmtfs(int sock)
 	sl = sizeof(sq);
 	ret = recvfrom(sock, buf, sizeof(buf), 0, (void *)&sq, &sl);
 	if (ret < 0) {
-		fprintf(stderr, "[RMTFS] recvfrom failed: %d\n", ret);
+		ret = -errno;
+		if (ret != -ENETRESET)
+			fprintf(stderr, "[RMTFS] recvfrom failed: %d\n", ret);
 		return ret;
 	}
 
@@ -457,8 +461,30 @@ static int handle_rmtfs(int sock)
 	return ret;
 }
 
+static int register_services(int rfsa_fd, int rmtfs_fd)
+{
+	int ret;
+
+	ret = qrtr_publish(rfsa_fd, RFSA_QMI_SERVICE, RFSA_QMI_VERSION, RFSA_QMI_INSTANCE);
+	if (ret < 0) {
+		fprintf(stderr, "failed to publish rfsa service");
+		return ret;
+	}
+
+	ret = qrtr_publish(rmtfs_fd, RMTFS_QMI_SERVICE, RMTFS_QMI_VERSION, RMTFS_QMI_INSTANCE);
+	if (ret < 0) {
+		fprintf(stderr, "failed to publish misc ta service");
+
+		qrtr_bye(rfsa_fd, RFSA_QMI_SERVICE, RFSA_QMI_VERSION, RFSA_QMI_INSTANCE);
+		return ret;
+	}
+
+	return 0;
+}
+
 int main(int argc, char **argv)
 {
+	bool do_register = true;
 	int rmtfs_fd;
 	int rfsa_fd;
 	fd_set rfds;
@@ -492,19 +518,16 @@ int main(int argc, char **argv)
 		goto close_storage;
 	}
 
-	ret = qrtr_publish(rfsa_fd, RFSA_QMI_SERVICE, RFSA_QMI_VERSION, RFSA_QMI_INSTANCE);
-	if (ret < 0) {
-		fprintf(stderr, "failed to publish rfsa service");
-		goto close_storage;
-	}
-
-	ret = qrtr_publish(rmtfs_fd, RMTFS_QMI_SERVICE, RMTFS_QMI_VERSION, RMTFS_QMI_INSTANCE);
-	if (ret < 0) {
-		fprintf(stderr, "failed to publish misc ta service");
-		goto unpublish_rfsa;
-	}
-
 	for (;;) {
+		if (do_register) {
+			dbgprintf("registering services\n");
+			ret = register_services(rfsa_fd, rmtfs_fd);
+			if (ret)
+				break;
+
+			do_register = false;
+		}
+
 		FD_ZERO(&rfds);
 		FD_SET(rfsa_fd, &rfds);
 		FD_SET(rmtfs_fd, &rfds);
@@ -519,9 +542,12 @@ int main(int argc, char **argv)
 		}
 
 		if (FD_ISSET(rfsa_fd, &rfds))
-			handle_rfsa(rfsa_fd);
+			ret = handle_rfsa(rfsa_fd);
 		else if (FD_ISSET(rmtfs_fd, &rfds))
-			handle_rmtfs(rmtfs_fd);
+			ret = handle_rmtfs(rmtfs_fd);
+
+		if (ret == -ENETRESET)
+			do_register = true;
 	}
 
 	qrtr_bye(rmtfs_fd, RMTFS_QMI_SERVICE, RMTFS_QMI_VERSION, RMTFS_QMI_INSTANCE);
