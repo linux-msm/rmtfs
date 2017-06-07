@@ -384,6 +384,25 @@ static int handle_rfsa(int sock)
 	return 0;
 }
 
+static int rmtfs_bye(uint32_t node, void *data)
+{
+	dbgprintf("[RMTFS] bye from %d\n", node);
+
+	return 0;
+}
+
+static int rmtfs_del_client(uint32_t node, uint32_t port, void *data)
+{
+	dbgprintf("[RMTFS] del_client %d:%d\n", node, port);
+
+	return 0;
+}
+
+struct qrtr_ind_ops rmtfs_ctrl_ops = {
+	.bye = rmtfs_bye,
+	.del_client = rmtfs_del_client,
+};
+
 static int handle_rmtfs(int sock)
 {
 	struct sockaddr_qrtr sq;
@@ -400,6 +419,11 @@ static int handle_rmtfs(int sock)
 	}
 
 	dbgprintf("[RMTFS] packet; from: %d:%d\n", sq.sq_node, sq.sq_port);
+
+	if (qrtr_is_ctrl_addr(&sq)) {
+		return qrtr_handle_ctrl_msg(&sq, buf, sizeof(buf),
+					    &rmtfs_ctrl_ops, NULL);
+	}
 
 	qmi = (struct qmi_packet*)buf;
 	if (qmi->msg_len != ret - sizeof(struct qmi_packet)) {
