@@ -496,25 +496,25 @@ int main(int argc, char **argv)
 
 	ret = rmtfs_mem_open();
 	if (ret) {
-		fprintf(stderr, "failed to initialize rmtfs shared memory");
+		fprintf(stderr, "failed to initialize rmtfs shared memory\n");
 		return 1;
 	}
 
 	ret = storage_open();
 	if (ret) {
-		fprintf(stderr, "failed to initialize storage system");
+		fprintf(stderr, "failed to initialize storage system\n");
 		goto close_rmtfs_mem;
 	}
 
 	rfsa_fd = qrtr_open(RFSA_QMI_SERVICE);
 	if (rfsa_fd < 0) {
-		fprintf(stderr, "failed to create qrtr socket");
+		fprintf(stderr, "failed to create qrtr socket\n");
 		goto close_storage;
 	}
 
 	rmtfs_fd = qrtr_open(RMTFS_QMI_SERVICE);
 	if (rmtfs_fd < 0) {
-		fprintf(stderr, "failed to create qrtr socket");
+		fprintf(stderr, "failed to create qrtr socket\n");
 		goto close_storage;
 	}
 
