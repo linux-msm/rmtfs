@@ -12,11 +12,13 @@ struct qmi_packet {
 	uint8_t data[];
 } __attribute__((__packed__));
 
-int rmtfs_mem_open(void);
-void rmtfs_mem_close(void);
-int64_t rmtfs_mem_alloc(size_t size);
-void *rmtfs_mem_ptr(unsigned phys_address, size_t len);
-void rmtfs_mem_free(void);
+struct rmtfs_mem;
+
+struct rmtfs_mem *rmtfs_mem_open(void);
+void rmtfs_mem_close(struct rmtfs_mem *rmem);
+int64_t rmtfs_mem_alloc(struct rmtfs_mem *rmem, size_t size);
+void *rmtfs_mem_ptr(struct rmtfs_mem *rmem, unsigned phys_address, size_t len);
+void rmtfs_mem_free(struct rmtfs_mem *rmem);
 
 int storage_open(void);
 int storage_get(unsigned node, const char *path);

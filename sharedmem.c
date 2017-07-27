@@ -10,58 +10,71 @@
 #include <unistd.h>
 #include "rmtfs.h"
 
-static int rmtfs_mem_enumerate(void);
+static int rmtfs_mem_enumerate(struct rmtfs_mem *rmem);
 
-static uint64_t rmtfs_mem_address;
-static uint64_t rmtfs_mem_size;
-static void *rmtfs_mem_base;
-static int rmtfs_mem_fd;
+struct rmtfs_mem {
+	uint64_t address;
+	uint64_t size;
+	void *base;
+	int fd;
+};
 
-int rmtfs_mem_open(void)
+struct rmtfs_mem *rmtfs_mem_open(void)
 {
+	struct rmtfs_mem *rmem;
 	void *base;
 	int ret;
 	int fd;
 
-	ret = rmtfs_mem_enumerate();
+	rmem = malloc(sizeof(*rmem));
+	if (!rmem)
+		return NULL;
+
+	ret = rmtfs_mem_enumerate(rmem);
 	if (ret < 0)
-		return ret;
+		goto err;
 
 	fd = open("/dev/mem", O_RDWR|O_SYNC);
 	if (fd < 0) {
 		fprintf(stderr, "failed to open /dev/mem\n");
-		return fd;
+		goto err;
 	}
 
-	base = mmap(0, rmtfs_mem_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, rmtfs_mem_address);
+	base = mmap(0, rmem->size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, rmem->address);
 	if (base == MAP_FAILED) {
 		fprintf(stderr, "failed to mmap: %s\n", strerror(errno));
-		return -errno;
+		goto err_close_fd;
 	}
 
-	rmtfs_mem_base = base;
-	rmtfs_mem_fd = fd;
+	rmem->base = base;
+	rmem->fd = fd;
 
-	return 0;
+	return rmem;
+
+err_close_fd:
+	close(fd);
+err:
+	free(rmem);
+	return NULL;
 }
 
-int64_t rmtfs_mem_alloc(size_t alloc_size)
+int64_t rmtfs_mem_alloc(struct rmtfs_mem *rmem, size_t alloc_size)
 {
-	if (alloc_size > rmtfs_mem_size) {
+	if (alloc_size > rmem->size) {
 		fprintf(stderr,
 			"[RMTFS] rmtfs shared memory not large enough for allocation request 0x%zx vs 0x%lx\n",
-			alloc_size, rmtfs_mem_size);
+			alloc_size, rmem->size);
 		return -EINVAL;
 	}
 
-	return rmtfs_mem_address;
+	return rmem->address;
 }
 
-void rmtfs_mem_free(void)
+void rmtfs_mem_free(struct rmtfs_mem *rmem)
 {
 }
 
-void *rmtfs_mem_ptr(unsigned phys_address, size_t len)
+void *rmtfs_mem_ptr(struct rmtfs_mem *rmem, unsigned phys_address, size_t len)
 {
 	uint64_t start;
 	uint64_t end;
@@ -69,22 +82,22 @@ void *rmtfs_mem_ptr(unsigned phys_address, size_t len)
 	start = phys_address;
 	end = start + len;
 
-	if (start < rmtfs_mem_address || end > rmtfs_mem_address + rmtfs_mem_size)
+	if (start < rmem->address || end > rmem->address + rmem->size)
 		return NULL;
 
-	return rmtfs_mem_base + phys_address - rmtfs_mem_address;
+	return rmem->base + phys_address - rmem->address;
 }
 
-void rmtfs_mem_close(void)
+void rmtfs_mem_close(struct rmtfs_mem *rmem)
 {
-	munmap(rmtfs_mem_base, rmtfs_mem_size);
-	close(rmtfs_mem_fd);
+	munmap(rmem->base, rmem->size);
+	close(rmem->fd);
 
-	rmtfs_mem_fd = -1;
-	rmtfs_mem_base = MAP_FAILED;
+	rmem->fd = -1;
+	rmem->base = MAP_FAILED;
 }
 
-static int rmtfs_mem_enumerate(void)
+static int rmtfs_mem_enumerate(struct rmtfs_mem *rmem)
 {
 	union {
 		uint32_t dw[2];
@@ -130,11 +143,11 @@ static int rmtfs_mem_enumerate(void)
 
 		n = read(regfd, &reg, sizeof(reg));
 		if (n == 2 * sizeof(uint32_t)) {
-			rmtfs_mem_address = be32toh(reg.dw[0]);
-			rmtfs_mem_size = be32toh(reg.dw[1]);
+			rmem->address = be32toh(reg.dw[0]);
+			rmem->size = be32toh(reg.dw[1]);
 		} else if (n == 2 * sizeof(uint64_t)) {
-			rmtfs_mem_address = be64toh(reg.qw[0]);
-			rmtfs_mem_size = be64toh(reg.qw[1]);
+			rmem->address = be64toh(reg.qw[0]);
+			rmem->size = be64toh(reg.qw[1]);
 		} else {
 			fprintf(stderr, "failed to read reg of %s: %s\n",
 				de->d_name, strerror(-errno));

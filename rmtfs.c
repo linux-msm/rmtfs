@@ -27,6 +27,8 @@
 
 #define SECTOR_SIZE		512
 
+static struct rmtfs_mem *rmem;
+
 /* TODO: include from kernel once it lands */
 struct sockaddr_qrtr {
 	unsigned short sq_family;
@@ -131,7 +133,7 @@ static void rmtfs_close(int sock, unsigned node, unsigned port, void *msg, size_
 	if (ret < 0)
 		qmi_result_error(&result, QMI_RMTFS_ERR_INTERNAL);
 
-	rmtfs_mem_free();
+	rmtfs_mem_free(rmem);
 
 respond:
 	dbgprintf("[RMTFS] close %d => (%d:%d)\n", caller_id, result.result, result.error);
@@ -208,7 +210,7 @@ static void rmtfs_iovec(int sock, unsigned node, unsigned port, void *msg, size_
 	}
 
 	for (i = 0; i < num_entries; i++) {
-		ptr = rmtfs_mem_ptr(entries[i].phys_offset, entries[i].num_sector * SECTOR_SIZE);
+		ptr = rmtfs_mem_ptr(rmem, entries[i].phys_offset, entries[i].num_sector * SECTOR_SIZE);
 		if (!ptr) {
 			qmi_result_error(&result, QMI_RMTFS_ERR_INTERNAL);
 			goto respond;
@@ -294,7 +296,7 @@ static void rmtfs_alloc_buf(int sock, unsigned node, unsigned port, void *msg, s
 		goto respond;
 	}
 
-	address = rmtfs_mem_alloc(alloc_size);
+	address = rmtfs_mem_alloc(rmem, alloc_size);
 	if (address < 0)
 		qmi_result_error(&result, QMI_RMTFS_ERR_INTERNAL);
 
@@ -494,8 +496,8 @@ int main(int argc, char **argv)
 	if (argc == 2 && strcmp(argv[1], "-v") == 0)
 		dbgprintf_enabled = true;
 
-	ret = rmtfs_mem_open();
-	if (ret) {
+	rmem = rmtfs_mem_open();
+	if (!rmem) {
 		fprintf(stderr, "failed to initialize rmtfs shared memory\n");
 		return 1;
 	}
@@ -556,7 +558,7 @@ unpublish_rfsa:
 close_storage:
 	storage_close();
 close_rmtfs_mem:
-	rmtfs_mem_close();
+	rmtfs_mem_close(rmem);
 
 	return 0;
 }
