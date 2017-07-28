@@ -496,10 +496,8 @@ int main(int argc, char **argv)
 		dbgprintf_enabled = true;
 
 	rmem = rmtfs_mem_open();
-	if (!rmem) {
-		fprintf(stderr, "failed to initialize rmtfs shared memory\n");
+	if (!rmem)
 		return 1;
-	}
 
 	ret = storage_open();
 	if (ret) {
