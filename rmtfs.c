@@ -25,8 +25,6 @@
 #define RMTFS_QMI_VERSION	1
 #define RMTFS_QMI_INSTANCE	0
 
-#define SECTOR_SIZE		512
-
 static struct rmtfs_mem *rmem;
 
 /* TODO: include from kernel once it lands */
@@ -159,6 +157,7 @@ static void rmtfs_iovec(int sock, unsigned node, unsigned port, void *msg, size_
 	struct rmtfs_qmi_result result = {};
 	struct rmtfs_iovec_resp *resp;
 	struct rmtfs_iovec_req *req;
+	unsigned long phys_offset;
 	uint32_t caller_id;
 	size_t num_entries;
 	uint8_t is_write;
@@ -167,6 +166,7 @@ static void rmtfs_iovec(int sock, unsigned node, unsigned port, void *msg, size_
 	ssize_t n;
 	size_t len;
 	void *ptr;
+	char buf[SECTOR_SIZE];
 	int ret;
 	int fd;
 	int i;
@@ -210,11 +210,7 @@ static void rmtfs_iovec(int sock, unsigned node, unsigned port, void *msg, size_
 	}
 
 	for (i = 0; i < num_entries; i++) {
-		ptr = rmtfs_mem_ptr(rmem, entries[i].phys_offset, entries[i].num_sector * SECTOR_SIZE);
-		if (!ptr) {
-			qmi_result_error(&result, QMI_RMTFS_ERR_INTERNAL);
-			goto respond;
-		}
+		phys_offset = entries[i].phys_offset;
 
 		n = lseek(fd, entries[i].sector_addr * SECTOR_SIZE, SEEK_SET);
 		if (n < 0) {
@@ -224,10 +220,13 @@ static void rmtfs_iovec(int sock, unsigned node, unsigned port, void *msg, size_
 		}
 
 		for (j = 0; j < entries[i].num_sector; j++) {
-			if (is_write)
-				n = write(fd, ptr, SECTOR_SIZE);
-			else
-				n = read(fd, ptr, SECTOR_SIZE);
+			if (is_write) {
+				n = rmtfs_mem_read(rmem, phys_offset, buf, SECTOR_SIZE);
+				n = write(fd, buf, n);
+			} else {
+				n = read(fd, buf, SECTOR_SIZE);
+				n = rmtfs_mem_write(rmem, phys_offset, buf, n);
+			}
 
 			if (n != SECTOR_SIZE) {
 				fprintf(stderr, "[RMTFS] failed to %s sector %d\n",
@@ -236,7 +235,7 @@ static void rmtfs_iovec(int sock, unsigned node, unsigned port, void *msg, size_
 				goto respond;
 			}
 
-			ptr += SECTOR_SIZE;
+			phys_offset += SECTOR_SIZE;
 		}
 	}
 

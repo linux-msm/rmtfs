@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include "qmi_rmtfs.h"
 
+#define SECTOR_SIZE		512
+
 struct qmi_packet {
 	uint8_t flags;
 	uint16_t txn_id;
@@ -17,8 +19,9 @@ struct rmtfs_mem;
 struct rmtfs_mem *rmtfs_mem_open(void);
 void rmtfs_mem_close(struct rmtfs_mem *rmem);
 int64_t rmtfs_mem_alloc(struct rmtfs_mem *rmem, size_t size);
-void *rmtfs_mem_ptr(struct rmtfs_mem *rmem, unsigned phys_address, size_t len);
 void rmtfs_mem_free(struct rmtfs_mem *rmem);
+ssize_t rmtfs_mem_read(struct rmtfs_mem *rmem, unsigned long phys_address, void *buf, ssize_t len);
+ssize_t rmtfs_mem_write(struct rmtfs_mem *rmem, unsigned long phys_address, const void *buf, ssize_t len);
 
 int storage_open(void);
 int storage_get(unsigned node, const char *path);

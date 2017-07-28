@@ -74,10 +74,13 @@ void rmtfs_mem_free(struct rmtfs_mem *rmem)
 {
 }
 
-void *rmtfs_mem_ptr(struct rmtfs_mem *rmem, unsigned phys_address, size_t len)
+static void *rmtfs_mem_ptr(struct rmtfs_mem *rmem, unsigned phys_address, ssize_t len)
 {
 	uint64_t start;
 	uint64_t end;
+
+	if (len < 0)
+		return NULL;
 
 	start = phys_address;
 	end = start + len;
@@ -86,6 +89,32 @@ void *rmtfs_mem_ptr(struct rmtfs_mem *rmem, unsigned phys_address, size_t len)
 		return NULL;
 
 	return rmem->base + phys_address - rmem->address;
+}
+
+ssize_t rmtfs_mem_read(struct rmtfs_mem *rmem, unsigned long phys_address, void *buf, ssize_t len)
+{
+	void *ptr;
+
+	ptr = rmtfs_mem_ptr(rmem, phys_address, len);
+	if (!ptr)
+		return -EINVAL;
+
+	memcpy(buf, ptr, len);
+
+	return len;
+}
+
+ssize_t rmtfs_mem_write(struct rmtfs_mem *rmem, unsigned long phys_address, const void *buf, ssize_t len)
+{
+	void *ptr;
+
+	ptr = rmtfs_mem_ptr(rmem, phys_address, len);
+	if (!ptr)
+		return -EINVAL;
+
+	memcpy(ptr, buf, len);
+
+	return len;
 }
 
 void rmtfs_mem_close(struct rmtfs_mem *rmem)
