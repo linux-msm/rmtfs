@@ -17,10 +17,6 @@
 #include "util.h"
 #include "rmtfs.h"
 
-#define RFSA_QMI_SERVICE	28
-#define RFSA_QMI_VERSION	1
-#define RFSA_QMI_INSTANCE	0
-
 #define RMTFS_QMI_SERVICE	14
 #define RMTFS_QMI_VERSION	1
 #define RMTFS_QMI_INSTANCE	0
@@ -365,29 +361,6 @@ free_resp:
 	rmtfs_dev_error_req_free(req);
 }
 
-static int handle_rfsa(int sock)
-{
-	struct sockaddr_qrtr sq;
-	socklen_t sl;
-	char buf[4096];
-	int ret;
-
-	sl = sizeof(sq);
-	ret = recvfrom(sock, buf, sizeof(buf), 0, (void *)&sq, &sl);
-	if (ret < 0) {
-		ret = -errno;
-		if (ret != -ENETRESET)
-			fprintf(stderr, "[RFSA] recvfrom failed: %d\n", ret);
-		return ret;
-	}
-
-	dbgprintf("[RFSA] packet; from: %d:%d\n", sq.sq_node, sq.sq_port);
-	if (dbgprintf_enabled)
-		print_hex_dump("[RFSA <-]", buf, ret);
-
-	return 0;
-}
-
 static int rmtfs_bye(uint32_t node, void *data)
 {
 	dbgprintf("[RMTFS] bye from %d\n", node);
@@ -462,32 +435,10 @@ static int handle_rmtfs(int sock)
 	return ret;
 }
 
-static int register_services(int rfsa_fd, int rmtfs_fd)
-{
-	int ret;
-
-	ret = qrtr_publish(rfsa_fd, RFSA_QMI_SERVICE, RFSA_QMI_VERSION, RFSA_QMI_INSTANCE);
-	if (ret < 0) {
-		fprintf(stderr, "failed to publish rfsa service");
-		return ret;
-	}
-
-	ret = qrtr_publish(rmtfs_fd, RMTFS_QMI_SERVICE, RMTFS_QMI_VERSION, RMTFS_QMI_INSTANCE);
-	if (ret < 0) {
-		fprintf(stderr, "failed to publish misc ta service");
-
-		qrtr_bye(rfsa_fd, RFSA_QMI_SERVICE, RFSA_QMI_VERSION, RFSA_QMI_INSTANCE);
-		return ret;
-	}
-
-	return 0;
-}
-
 int main(int argc, char **argv)
 {
 	bool do_register = true;
 	int rmtfs_fd;
-	int rfsa_fd;
 	fd_set rfds;
 	int nfds;
 	int ret;
@@ -505,12 +456,6 @@ int main(int argc, char **argv)
 		goto close_rmtfs_mem;
 	}
 
-	rfsa_fd = qrtr_open(RFSA_QMI_SERVICE);
-	if (rfsa_fd < 0) {
-		fprintf(stderr, "failed to create qrtr socket\n");
-		goto close_storage;
-	}
-
 	rmtfs_fd = qrtr_open(RMTFS_QMI_SERVICE);
 	if (rmtfs_fd < 0) {
 		fprintf(stderr, "failed to create qrtr socket\n");
@@ -520,18 +465,20 @@ int main(int argc, char **argv)
 	for (;;) {
 		if (do_register) {
 			dbgprintf("registering services\n");
-			ret = register_services(rfsa_fd, rmtfs_fd);
-			if (ret)
+
+			ret = qrtr_publish(rmtfs_fd, RMTFS_QMI_SERVICE, RMTFS_QMI_VERSION, RMTFS_QMI_INSTANCE);
+			if (ret < 0) {
+				fprintf(stderr, "failed to publish rmtfs service");
 				break;
+			}
 
 			do_register = false;
 		}
 
 		FD_ZERO(&rfds);
-		FD_SET(rfsa_fd, &rfds);
 		FD_SET(rmtfs_fd, &rfds);
 
-		nfds = MAX(rfsa_fd, rmtfs_fd) + 1;
+		nfds = rmtfs_fd + 1;
 		ret = select(nfds, &rfds, NULL, NULL, NULL);
 		if (ret < 0) {
 			fprintf(stderr, "select failed: %d\n", ret);
@@ -540,9 +487,7 @@ int main(int argc, char **argv)
 			continue;
 		}
 
-		if (FD_ISSET(rfsa_fd, &rfds))
-			ret = handle_rfsa(rfsa_fd);
-		else if (FD_ISSET(rmtfs_fd, &rfds))
+		if (FD_ISSET(rmtfs_fd, &rfds))
 			ret = handle_rmtfs(rmtfs_fd);
 
 		if (ret == -ENETRESET)
@@ -550,8 +495,6 @@ int main(int argc, char **argv)
 	}
 
 	qrtr_bye(rmtfs_fd, RMTFS_QMI_SERVICE, RMTFS_QMI_VERSION, RMTFS_QMI_INSTANCE);
-unpublish_rfsa:
-	qrtr_bye(rfsa_fd, RFSA_QMI_SERVICE, RFSA_QMI_VERSION, RFSA_QMI_INSTANCE);
 close_storage:
 	storage_close();
 close_rmtfs_mem:
