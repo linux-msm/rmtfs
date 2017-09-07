@@ -54,7 +54,7 @@ static int rmtfs_mem_open_rfsa(struct rmtfs_mem *rmem, int client_id)
 	int ret;
 	int fd;
 
-	sprintf(path, "/dev/qcom_rfsa%d", client_id);
+	sprintf(path, "/dev/qcom_rmtfs_mem%d", client_id);
 
 	fd = open(path, O_RDWR);
 	if (fd < 0) {
