@@ -406,12 +406,45 @@ static int handle_rmtfs(int sock)
 	return ret;
 }
 
+static int run_rmtfs(void)
+{
+	int rmtfs_fd;
+	int ret;
+
+	rmtfs_fd = qrtr_open(RMTFS_QMI_SERVICE);
+	if (rmtfs_fd < 0) {
+		fprintf(stderr, "failed to create qrtr socket\n");
+		return rmtfs_fd;
+	}
+
+	dbgprintf("registering services\n");
+
+	ret = qrtr_publish(rmtfs_fd, RMTFS_QMI_SERVICE,
+			   RMTFS_QMI_VERSION, RMTFS_QMI_INSTANCE);
+	if (ret < 0) {
+		fprintf(stderr, "failed to publish rmtfs service");
+		return ret;
+	}
+
+	for (;;) {
+		ret = qrtr_poll(rmtfs_fd, -1);
+		if (ret < 0 && errno != EINTR)
+			break;
+		else if (ret < 0 && errno == EINTR)
+			continue;
+
+		ret = handle_rmtfs(rmtfs_fd);
+		if (ret == -ENETRESET)
+			break;
+	}
+
+	close(rmtfs_fd);
+
+	return ret;
+}
+
 int main(int argc, char **argv)
 {
-	bool do_register = true;
-	int rmtfs_fd;
-	fd_set rfds;
-	int nfds;
 	int ret;
 
 	if (argc == 2 && strcmp(argv[1], "-v") == 0)
@@ -427,46 +460,17 @@ int main(int argc, char **argv)
 		goto close_rmtfs_mem;
 	}
 
-	rmtfs_fd = qrtr_open(RMTFS_QMI_SERVICE);
-	if (rmtfs_fd < 0) {
-		fprintf(stderr, "failed to create qrtr socket\n");
-		goto close_storage;
-	}
-
 	for (;;) {
-		if (do_register) {
-			dbgprintf("registering services\n");
+		ret = run_rmtfs();
 
-			ret = qrtr_publish(rmtfs_fd, RMTFS_QMI_SERVICE, RMTFS_QMI_VERSION, RMTFS_QMI_INSTANCE);
-			if (ret < 0) {
-				fprintf(stderr, "failed to publish rmtfs service");
-				break;
-			}
-
-			do_register = false;
-		}
-
-		FD_ZERO(&rfds);
-		FD_SET(rmtfs_fd, &rfds);
-
-		nfds = rmtfs_fd + 1;
-		ret = select(nfds, &rfds, NULL, NULL, NULL);
-		if (ret < 0) {
-			fprintf(stderr, "select failed: %d\n", ret);
+		if (ret <= 0 && ret != -ENETRESET)
 			break;
-		} else if (ret == 0) {
-			continue;
-		}
-
-		if (FD_ISSET(rmtfs_fd, &rfds))
-			ret = handle_rmtfs(rmtfs_fd);
-
-		if (ret == -ENETRESET)
-			do_register = true;
 	}
 
-	qrtr_bye(rmtfs_fd, RMTFS_QMI_SERVICE, RMTFS_QMI_VERSION, RMTFS_QMI_INSTANCE);
-close_storage:
+	do {
+		ret = run_rmtfs();
+	} while (ret == -ENETRESET);
+
 	storage_close();
 close_rmtfs_mem:
 	rmtfs_mem_close(rmem);
