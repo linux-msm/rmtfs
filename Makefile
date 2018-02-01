@@ -4,7 +4,7 @@ CFLAGS := -Wall -g -I../qrtr/lib -O2
 LDFLAGS := -L../qrtr -lqrtr -ludev
 prefix := /usr/local
 
-SRCS := qmi_rmtfs.c qmi_tlv.c rmtfs.c sharedmem.c storage.c util.c
+SRCS := qmi_rmtfs.c rmtfs.c sharedmem.c storage.c util.c
 OBJS := $(SRCS:.c=.o)
 
 $(OUT): $(OBJS)
