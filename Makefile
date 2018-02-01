@@ -11,7 +11,7 @@ $(OUT): $(OBJS)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 %.c: %.qmi
-	qmic < $<
+	qmic -k < $<
 
 install: $(OUT)
 	install -D -m 755 $< $(DESTDIR)$(prefix)/bin/$<
