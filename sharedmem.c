@@ -114,6 +114,83 @@ err_close_fd:
 	return -saved_errno;
 }
 
+static int rmtfs_mem_open_uio(struct rmtfs_mem *rmem, int client_id)
+{
+	struct udev_device *dev;
+	struct udev *udev;
+	int saved_errno;
+	struct stat sb;
+	char path[32];
+	int ret;
+	int fd;
+
+	snprintf(path, sizeof(path), "/dev/qcom_rmtfs_uio%d", client_id);
+
+	fd = open(path, O_RDWR);
+	if (fd < 0) {
+		saved_errno = errno;
+		fprintf(stderr, "failed to open %s: %s\n", path, strerror(errno));
+		return -saved_errno;
+	}
+	rmem->fd = fd;
+
+	ret = fstat(fd, &sb);
+	if (ret < 0) {
+		saved_errno = errno;
+		fprintf(stderr, "failed to stat %s: %s\n", path, strerror(errno));
+		close(fd);
+		goto err_close_fd;
+	}
+
+	udev = udev_new();
+	if (!udev) {
+		saved_errno = errno;
+		fprintf(stderr, "failed to create udev context\n");
+		goto err_close_fd;
+	}
+
+	dev = udev_device_new_from_devnum(udev, 'c', sb.st_rdev);
+	if (!dev) {
+		saved_errno = errno;
+		fprintf(stderr, "unable to find udev device\n");
+		goto err_unref_udev;
+	}
+
+	ret = parse_hex_sysattr(dev, "maps/map0/addr", &rmem->address);
+	if (ret < 0) {
+		fprintf(stderr, "failed to parse phys_addr of %s\n", path);
+		saved_errno = -ret;
+		goto err_unref_dev;
+	}
+
+	ret = parse_hex_sysattr(dev, "maps/map0/size", &rmem->size);
+	if (ret < 0) {
+		fprintf(stderr, "failed to parse size of %s\n", path);
+		saved_errno = -ret;
+		goto err_unref_dev;
+	}
+
+	rmem->base = mmap(0, rmem->size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+	if (rmem->base == MAP_FAILED) {
+		saved_errno = errno;
+		fprintf(stderr, "failed to mmap: %s\n", strerror(errno));
+		goto err_unref_dev;
+	}
+
+	udev_device_unref(dev);
+	udev_unref(udev);
+
+	return 0;
+
+err_unref_dev:
+	udev_device_unref(dev);
+err_unref_udev:
+	udev_unref(udev);
+err_close_fd:
+	close(fd);
+	return -saved_errno;
+}
+
 struct rmtfs_mem *rmtfs_mem_open(void)
 {
 	struct rmtfs_mem *rmem;
@@ -131,26 +208,32 @@ struct rmtfs_mem *rmtfs_mem_open(void)
 	if (ret < 0 && ret != -ENOENT) {
 		goto err;
 	} else if (ret < 0) {
-		fprintf(stderr, "falling back to /dev/mem access\n");
-
-		ret = rmtfs_mem_enumerate(rmem);
-		if (ret < 0)
+		fprintf(stderr, "falling back to uio access\n");
+		ret = rmtfs_mem_open_uio(rmem, 1);
+		if (ret < 0 && ret != -ENOENT) {
 			goto err;
+		} else if (ret < 0) {
+			fprintf(stderr, "falling back to /dev/mem access\n");
 
-		fd = open("/dev/mem", O_RDWR|O_SYNC);
-		if (fd < 0) {
-			fprintf(stderr, "failed to open /dev/mem\n");
-			goto err;
+			ret = rmtfs_mem_enumerate(rmem);
+			if (ret < 0)
+				goto err;
+
+			fd = open("/dev/mem", O_RDWR|O_SYNC);
+			if (fd < 0) {
+				fprintf(stderr, "failed to open /dev/mem\n");
+				goto err;
+			}
+
+			base = mmap(0, rmem->size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, rmem->address);
+			if (base == MAP_FAILED) {
+				fprintf(stderr, "failed to mmap: %s\n", strerror(errno));
+				goto err_close_fd;
+			}
+
+			rmem->base = base;
+			rmem->fd = fd;
 		}
-
-		base = mmap(0, rmem->size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, rmem->address);
-		if (base == MAP_FAILED) {
-			fprintf(stderr, "failed to mmap: %s\n", strerror(errno));
-			goto err_close_fd;
-		}
-
-		rmem->base = base;
-		rmem->fd = fd;
 	}
 
 	return rmem;

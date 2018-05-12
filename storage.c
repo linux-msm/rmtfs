@@ -84,7 +84,7 @@ found:
 	if (fd < 0) {
 		saved_errno = errno;
 		fprintf(stderr, "[storage] failed to open '%s' (requested '%s'): %s\n",
-				part->actual, part->path, strerror(-errno));
+				part->actual, part->path, strerror(saved_errno));
 		return -saved_errno;
 	}
 
