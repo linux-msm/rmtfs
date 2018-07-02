@@ -23,9 +23,9 @@ struct rmtfs_mem {
 };
 
 static int parse_hex_sysattr(struct udev_device *dev, const char *name,
-			     unsigned long *value)
+			     uint64_t *value)
 {
-	unsigned long val;
+	unsigned long long val;
 	const char *buf;
 	char *endptr;
 
@@ -34,8 +34,8 @@ static int parse_hex_sysattr(struct udev_device *dev, const char *name,
 		return -ENOENT;
 
 	errno = 0;
-	val = strtoul(buf, &endptr, 16);
-	if ((val == LONG_MAX && errno == ERANGE) || endptr == buf) {
+	val = strtoull(buf, &endptr, 16);
+	if ((val == ULLONG_MAX && errno == ERANGE) || endptr == buf) {
 		return -errno;
 	}
 
