@@ -1,8 +1,8 @@
 OUT := rmtfs
 
-CFLAGS := -Wall -g -O2
-LDFLAGS := -lqrtr -ludev
-prefix := /usr/local
+CFLAGS += -Wall -g -O2
+LDFLAGS += -lqrtr -ludev
+prefix = /usr/local
 
 SRCS := qmi_rmtfs.c rmtfs.c sharedmem.c storage.c util.c
 OBJS := $(SRCS:.c=.o)
