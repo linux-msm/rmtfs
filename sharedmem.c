@@ -261,7 +261,7 @@ void rmtfs_mem_free(struct rmtfs_mem *rmem)
 {
 }
 
-static void *rmtfs_mem_ptr(struct rmtfs_mem *rmem, unsigned phys_address, ssize_t len)
+static void *rmtfs_mem_ptr(struct rmtfs_mem *rmem, unsigned long phys_address, ssize_t len)
 {
 	uint64_t start;
 	uint64_t end;
