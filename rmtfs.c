@@ -21,9 +21,6 @@
 #define RMTFS_QMI_VERSION	1
 #define RMTFS_QMI_INSTANCE	0
 
-static inline __le32 cpu_to_le32(uint32_t x) { return htole32(x); }
-static inline uint32_t le32_to_cpu(__le32 x) { return le32toh(x); }
-
 static struct rmtfs_mem *rmem;
 
 static bool dbgprintf_enabled;
