@@ -23,10 +23,10 @@ struct caller {
 };
 
 static const struct partition partition_table[] = {
-	{ "/boot/modem_fs1", "/boot/modem_fs1" },
-	{ "/boot/modem_fs2", "/boot/modem_fs2" },
-	{ "/boot/modem_fsc", "/boot/modem_fsc" },
-	{ "/boot/modem_fsg", "/boot/modem_fsg" },
+	{ "/boot/modem_fs1", RMTFS_DIR "/modem_fs1" },
+	{ "/boot/modem_fs2", RMTFS_DIR "/modem_fs2" },
+	{ "/boot/modem_fsc", RMTFS_DIR "/modem_fsc" },
+	{ "/boot/modem_fsg", RMTFS_DIR "/modem_fsg" },
 	{}
 };
 

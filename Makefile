@@ -4,6 +4,10 @@ CFLAGS += -Wall -g -O2
 LDFLAGS += -lqrtr -ludev
 prefix = /usr/local
 
+RMTFS_DIR = /boot
+
+CFLAGS += -DRMTFS_DIR=\"$(RMTFS_DIR)\"
+
 SRCS := qmi_rmtfs.c rmtfs.c sharedmem.c storage.c util.c
 OBJS := $(SRCS:.c=.o)
 
