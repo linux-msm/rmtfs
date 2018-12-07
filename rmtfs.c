@@ -188,10 +188,15 @@ static void rmtfs_iovec(int sock, struct qrtr_packet *pkt)
 		for (j = 0; j < entries[i].num_sector; j++) {
 			if (is_write) {
 				n = rmtfs_mem_read(rmem, phys_offset, buf, SECTOR_SIZE);
-				n = write(fd, buf, n);
+				if (n == SECTOR_SIZE)
+					n = write(fd, buf, n);
 			} else {
 				n = read(fd, buf, SECTOR_SIZE);
-				n = rmtfs_mem_write(rmem, phys_offset, buf, n);
+				if (n >= 0) {
+					if (n < SECTOR_SIZE)
+						memset(buf + n, 0, SECTOR_SIZE - n);
+					n = rmtfs_mem_write(rmem, phys_offset, buf, SECTOR_SIZE);
+				}
 			}
 
 			if (n != SECTOR_SIZE) {
