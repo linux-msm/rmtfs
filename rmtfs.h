@@ -23,7 +23,7 @@ void rmtfs_mem_free(struct rmtfs_mem *rmem);
 ssize_t rmtfs_mem_read(struct rmtfs_mem *rmem, unsigned long phys_address, void *buf, ssize_t len);
 ssize_t rmtfs_mem_write(struct rmtfs_mem *rmem, unsigned long phys_address, const void *buf, ssize_t len);
 
-int storage_open(void);
+int storage_open(const char *storage_root);
 int storage_get(unsigned node, const char *path);
 int storage_put(unsigned node, int caller_id);
 int storage_get_handle(unsigned node, int caller_id);

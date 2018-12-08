@@ -22,19 +22,24 @@ struct caller {
 	const struct partition *partition;
 };
 
+static const char *storage_dir = "/boot";
+
 static const struct partition partition_table[] = {
-	{ "/boot/modem_fs1", "/boot/modem_fs1" },
-	{ "/boot/modem_fs2", "/boot/modem_fs2" },
-	{ "/boot/modem_fsc", "/boot/modem_fsc" },
-	{ "/boot/modem_fsg", "/boot/modem_fsg" },
+	{ "/boot/modem_fs1", "modem_fs1" },
+	{ "/boot/modem_fs2", "modem_fs2" },
+	{ "/boot/modem_fsc", "modem_fsc" },
+	{ "/boot/modem_fsg", "modem_fsg" },
 	{}
 };
 
 static struct caller caller_handles[MAX_CALLERS];
 
-int storage_open(void)
+int storage_open(const char *storage_root)
 {
 	int i;
+
+	if (storage_root)
+		storage_dir = storage_root;
 
 	for (i = 0; i < MAX_CALLERS; i++) {
 		caller_handles[i].id = i;
@@ -46,8 +51,10 @@ int storage_open(void)
 
 int storage_get(unsigned node, const char *path)
 {
+	char *fspath;
 	const struct partition *part;
 	struct caller *caller = NULL;
+	size_t pathlen;
 	int saved_errno;
 	int fd;
 	int i;
@@ -80,11 +87,14 @@ found:
 		return -EBUSY;
 	}
 
-	fd = open(part->actual, O_RDWR);
+	pathlen = strlen(storage_dir) + strlen(part->actual) + 2;
+	fspath = alloca(pathlen);
+	snprintf(fspath, pathlen, "%s/%s", storage_dir, part->actual);
+	fd = open(fspath, O_RDWR);
 	if (fd < 0) {
 		saved_errno = errno;
 		fprintf(stderr, "[storage] failed to open '%s' (requested '%s'): %s\n",
-				part->actual, part->path, strerror(saved_errno));
+				fspath, part->path, strerror(saved_errno));
 		return -saved_errno;
 	}
 

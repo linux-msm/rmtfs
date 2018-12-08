@@ -448,15 +448,32 @@ static int run_rmtfs(void)
 int main(int argc, char **argv)
 {
 	int ret;
+	int option;
+	const char *storage_root = NULL;
 
-	if (argc == 2 && strcmp(argv[1], "-v") == 0)
-		dbgprintf_enabled = true;
+	while ((option = getopt(argc, argv, "o:v")) != -1) {
+		switch (option) {
+		/* -o sets the directory where EFS images are stored. */
+		case 'o':
+			storage_root = optarg;
+			break;
+
+		/* -v is for verbose */
+		case 'v':
+			dbgprintf_enabled = 1;
+			break;
+
+		case '?':
+			fprintf(stderr, "Unknown option: -%c\n", option);
+			return 1;
+		}
+	}
 
 	rmem = rmtfs_mem_open();
 	if (!rmem)
 		return 1;
 
-	ret = storage_open();
+	ret = storage_open(storage_root);
 	if (ret) {
 		fprintf(stderr, "failed to initialize storage system\n");
 		goto close_rmtfs_mem;
