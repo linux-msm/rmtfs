@@ -35,4 +35,8 @@ void storage_exit(void);
 ssize_t storage_pread(const struct rmtfd *rmtfd, void *buf, size_t nbyte, off_t offset);
 ssize_t storage_pwrite(struct rmtfd *rmtfd, const void *buf, size_t nbyte, off_t offset);
 
+int rproc_init(void);
+int rproc_start(void);
+int rproc_stop(void);
+
 #endif

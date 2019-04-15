@@ -2,14 +2,18 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <ctype.h>
+#include <dirent.h>
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <libqrtr.h>
+#include <limits.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -22,6 +26,7 @@
 #define RMTFS_QMI_INSTANCE	0
 
 static struct rmtfs_mem *rmem;
+static sig_atomic_t sig_int_count;
 
 static bool dbgprintf_enabled;
 static void dbgprintf(const char *fmt, ...)
@@ -410,9 +415,15 @@ static int handle_rmtfs(int sock)
 	return ret;
 }
 
-static int run_rmtfs(void)
+static int sig_int_count;
+
+static int run_rmtfs(int rprocfd)
 {
+	bool sig_int_handled = false;
 	int rmtfs_fd;
+	fd_set rfds;
+	char done;
+	int nfds;
 	int ret;
 
 	rmtfs_fd = qrtr_open(RMTFS_QMI_SERVICE);
@@ -430,16 +441,40 @@ static int run_rmtfs(void)
 		return ret;
 	}
 
+	if (rprocfd >= 0)
+		rproc_start();
+
 	for (;;) {
-		ret = qrtr_poll(rmtfs_fd, -1);
+		if (rprocfd >= 0 && sig_int_count == 1 && !sig_int_handled) {
+			rproc_stop();
+			sig_int_handled = true;
+		} else if (sig_int_count > 1) {
+			break;
+		}
+
+		FD_ZERO(&rfds);
+		FD_SET(rmtfs_fd, &rfds);
+		if (rprocfd >= 0)
+			FD_SET(rprocfd, &rfds);
+		nfds = MAX(rmtfs_fd, rprocfd) + 1;
+
+		ret = select(nfds, &rfds, NULL, NULL, NULL);
 		if (ret < 0 && errno != EINTR)
 			break;
 		else if (ret < 0 && errno == EINTR)
 			continue;
 
-		ret = handle_rmtfs(rmtfs_fd);
-		if (ret == -ENETRESET)
-			break;
+		if (rprocfd >= 0 && FD_ISSET(rprocfd, &rfds)) {
+			ret = read(rprocfd, &done, 1);
+			if (!ret || done == 'Y')
+				break;
+		}
+
+		if (FD_ISSET(rmtfs_fd, &rfds)) {
+			ret = handle_rmtfs(rmtfs_fd);
+			if (ret == -ENETRESET)
+				break;
+		}
 	}
 
 	close(rmtfs_fd);
@@ -447,15 +482,22 @@ static int run_rmtfs(void)
 	return ret;
 }
 
+static void sig_int_handler(int signo)
+{
+	sig_int_count++;
+}
+
 int main(int argc, char **argv)
 {
+	struct sigaction action;
 	bool use_partitions = false;
 	bool read_only = false;
+	int rprocfd = -1;
 	int ret;
 	int option;
 	const char *storage_root = NULL;
 
-	while ((option = getopt(argc, argv, "o:Prv")) != -1) {
+	while ((option = getopt(argc, argv, "o:Prsv")) != -1) {
 		switch (option) {
 		/* -o sets the directory where EFS images are stored. */
 		case 'o':
@@ -472,6 +514,11 @@ int main(int argc, char **argv)
 			read_only = true;
 			break;
 
+		/* enable sync for the mss rproc instance */
+		case 's':
+			rprocfd = rproc_init();
+			break;
+
 		/* -v is for verbose */
 		case 'v':
 			dbgprintf_enabled = 1;
@@ -483,6 +530,13 @@ int main(int argc, char **argv)
 		}
 	}
 
+	sigemptyset(&action.sa_mask);
+	action.sa_handler = sig_int_handler;
+	action.sa_flags = 0;
+
+	sigaction(SIGINT, &action, NULL);
+	sigaction(SIGTERM, &action, NULL);
+
 	rmem = rmtfs_mem_open();
 	if (!rmem)
 		return 1;
@@ -493,15 +547,8 @@ int main(int argc, char **argv)
 		goto close_rmtfs_mem;
 	}
 
-	for (;;) {
-		ret = run_rmtfs();
-
-		if (ret <= 0 && ret != -ENETRESET)
-			break;
-	}
-
 	do {
-		ret = run_rmtfs();
+		ret = run_rmtfs(rprocfd);
 	} while (ret == -ENETRESET);
 
 	storage_exit();

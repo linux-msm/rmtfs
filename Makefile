@@ -1,10 +1,10 @@
 OUT := rmtfs
 
 CFLAGS += -Wall -g -O2
-LDFLAGS += -lqrtr -ludev
+LDFLAGS += -lqrtr -ludev -lpthread
 prefix = /usr/local
 
-SRCS := qmi_rmtfs.c rmtfs.c sharedmem.c storage.c util.c
+SRCS := qmi_rmtfs.c rmtfs.c rproc.c sharedmem.c storage.c util.c
 OBJS := $(SRCS:.c=.o)
 
 $(OUT): $(OBJS)
