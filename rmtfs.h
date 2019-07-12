@@ -29,5 +29,7 @@ int storage_put(unsigned node, int caller_id);
 int storage_get_handle(unsigned node, int caller_id);
 int storage_get_error(unsigned node, int caller_id);
 void storage_close(void);
+ssize_t storage_pread(int fildes, void *buf, size_t nbyte, off_t offset);
+ssize_t storage_pwrite(int fildes, const void *buf, size_t nbyte, off_t offset);
 
 #endif

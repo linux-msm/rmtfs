@@ -161,3 +161,13 @@ void storage_close(void)
 	}
 }
 
+ssize_t storage_pread(int fildes, void *buf, size_t nbyte, off_t offset)
+{
+	return pread(fildes, buf, nbyte, offset);
+}
+
+ssize_t storage_pwrite(int fildes, const void *buf, size_t nbyte, off_t offset)
+{
+	return pwrite(fildes, buf, nbyte, offset);
+}
+

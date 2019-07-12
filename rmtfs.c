@@ -141,12 +141,14 @@ static void rmtfs_iovec(int sock, struct qrtr_packet *pkt)
 	struct rmtfs_iovec_resp resp = {};
 	struct rmtfs_iovec_req req = {};
 	DEFINE_QRTR_PACKET(resp_buf, 256);
-	unsigned long phys_offset;
 	uint32_t caller_id = 0;
 	size_t num_entries = 0;
+	off_t sector_base;
 	uint8_t is_write;
+	off_t phys_base;
 	uint8_t force = 0;
 	unsigned txn;
+	off_t offset;
 	ssize_t len;
 	ssize_t n;
 	char buf[SECTOR_SIZE];
@@ -176,26 +178,21 @@ static void rmtfs_iovec(int sock, struct qrtr_packet *pkt)
 	}
 
 	for (i = 0; i < num_entries; i++) {
-		phys_offset = entries[i].phys_offset;
-
-		n = lseek(fd, entries[i].sector_addr * SECTOR_SIZE, SEEK_SET);
-		if (n < 0) {
-			fprintf(stderr, "[RMTFS] failed to seek sector %d\n", entries[i].sector_addr);
-			qmi_result_error(&resp.result, QMI_RMTFS_ERR_INTERNAL);
-			goto respond;
-		}
+		phys_base = entries[i].phys_offset;
+		sector_base = entries[i].sector_addr * SECTOR_SIZE;
+		offset = 0;
 
 		for (j = 0; j < entries[i].num_sector; j++) {
 			if (is_write) {
-				n = rmtfs_mem_read(rmem, phys_offset, buf, SECTOR_SIZE);
+				n = rmtfs_mem_read(rmem, phys_base + offset, buf, SECTOR_SIZE);
 				if (n == SECTOR_SIZE)
-					n = write(fd, buf, n);
+					n = storage_pwrite(fd, buf, n, sector_base + offset);
 			} else {
-				n = read(fd, buf, SECTOR_SIZE);
+				n = storage_pread(fd, buf, SECTOR_SIZE, sector_base + offset);
 				if (n >= 0) {
 					if (n < SECTOR_SIZE)
 						memset(buf + n, 0, SECTOR_SIZE - n);
-					n = rmtfs_mem_write(rmem, phys_offset, buf, SECTOR_SIZE);
+					n = rmtfs_mem_write(rmem, phys_base + offset, buf, SECTOR_SIZE);
 				}
 			}
 
@@ -206,7 +203,7 @@ static void rmtfs_iovec(int sock, struct qrtr_packet *pkt)
 				goto respond;
 			}
 
-			phys_offset += SECTOR_SIZE;
+			offset += SECTOR_SIZE;
 		}
 	}
 
