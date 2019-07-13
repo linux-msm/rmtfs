@@ -51,6 +51,7 @@ static void rmtfs_open(int sock, const struct qrtr_packet *pkt)
 	struct rmtfs_open_resp resp = {};
 	struct rmtfs_open_req req = {};
 	DEFINE_QRTR_PACKET(resp_buf, 256);
+	struct rmtfd *rmtfd;
 	unsigned int txn;
 	ssize_t len;
 	int caller_id = -1;
@@ -63,12 +64,13 @@ static void rmtfs_open(int sock, const struct qrtr_packet *pkt)
 		goto respond;
 	}
 
-	caller_id = storage_get(pkt->node, req.path);
-	if (caller_id < 0) {
+	rmtfd = storage_open(pkt->node, req.path);
+	if (!rmtfd) {
 		qmi_result_error(&resp.result, QMI_RMTFS_ERR_INTERNAL);
 		goto respond;
 	}
 
+	caller_id = storage_get_caller_id(rmtfd);
 	resp.caller_id = caller_id;
 	resp.caller_id_valid = true;
 
@@ -97,6 +99,7 @@ static void rmtfs_close(int sock, const struct qrtr_packet *pkt)
 	struct rmtfs_close_resp resp = {};
 	struct rmtfs_close_req req = {};
 	DEFINE_QRTR_PACKET(resp_buf, 256);
+	struct rmtfd *rmtfd;
 	unsigned int txn;
 	ssize_t len;
 	int ret;
@@ -108,11 +111,13 @@ static void rmtfs_close(int sock, const struct qrtr_packet *pkt)
 		goto respond;
 	}
 
-	ret = storage_put(pkt->node, req.caller_id);
-	if (ret < 0) {
+	rmtfd = storage_get(pkt->node, req.caller_id);
+	if (!rmtfd) {
 		qmi_result_error(&resp.result, QMI_RMTFS_ERR_INTERNAL);
+		goto respond;
 	}
 
+	storage_close(rmtfd);
 	rmtfs_mem_free(rmem);
 
 respond:
@@ -141,6 +146,7 @@ static void rmtfs_iovec(int sock, struct qrtr_packet *pkt)
 	struct rmtfs_iovec_resp resp = {};
 	struct rmtfs_iovec_req req = {};
 	DEFINE_QRTR_PACKET(resp_buf, 256);
+	struct rmtfd *rmtfd;
 	uint32_t caller_id = 0;
 	size_t num_entries = 0;
 	off_t sector_base;
@@ -153,7 +159,6 @@ static void rmtfs_iovec(int sock, struct qrtr_packet *pkt)
 	ssize_t n;
 	char buf[SECTOR_SIZE];
 	int ret;
-	int fd;
 	int i;
 	int j;
 
@@ -170,8 +175,8 @@ static void rmtfs_iovec(int sock, struct qrtr_packet *pkt)
 	num_entries = req.iovec_len;
 	force = req.is_force_sync;
 
-	fd = storage_get_handle(pkt->node, caller_id);
-	if (fd < 0) {
+	rmtfd = storage_get(pkt->node, caller_id);
+	if (!rmtfd) {
 		fprintf(stderr, "[RMTFS] iovec request for non-existing caller\n");
 		qmi_result_error(&resp.result, QMI_RMTFS_ERR_INTERNAL);
 		goto respond;
@@ -186,9 +191,9 @@ static void rmtfs_iovec(int sock, struct qrtr_packet *pkt)
 			if (is_write) {
 				n = rmtfs_mem_read(rmem, phys_base + offset, buf, SECTOR_SIZE);
 				if (n == SECTOR_SIZE)
-					n = storage_pwrite(fd, buf, n, sector_base + offset);
+					n = storage_pwrite(rmtfd, buf, n, sector_base + offset);
 			} else {
-				n = storage_pread(fd, buf, SECTOR_SIZE, sector_base + offset);
+				n = storage_pread(rmtfd, buf, SECTOR_SIZE, sector_base + offset);
 				if (n >= 0) {
 					if (n < SECTOR_SIZE)
 						memset(buf + n, 0, SECTOR_SIZE - n);
@@ -287,7 +292,7 @@ static void rmtfs_get_dev_error(int sock, struct qrtr_packet *pkt)
 	struct rmtfs_dev_error_resp resp = {};
 	struct rmtfs_dev_error_req req = {};
 	DEFINE_QRTR_PACKET(resp_buf, 256);
-	int dev_error = 0;
+	struct rmtfd *rmtfd;
 	unsigned txn;
 	ssize_t len;
 	int ret;
@@ -300,17 +305,17 @@ static void rmtfs_get_dev_error(int sock, struct qrtr_packet *pkt)
 		goto respond;
 	}
 
-	dev_error = storage_get_error(pkt->node, req.caller_id);
-	if (dev_error < 0) {
+	rmtfd = storage_get(pkt->node, req.caller_id);
+	if (rmtfd) {
 		qmi_result_error(&resp.result, QMI_RMTFS_ERR_INTERNAL);
 		goto respond;
 	}
 
-	resp.status = dev_error;
+	resp.status = storage_get_error(rmtfd);
 	resp.status_valid = true;
 
 respond:
-	dbgprintf("[RMTFS] dev_error %d => %d (%d:%d)\n", req.caller_id, dev_error, resp.result.result, resp.result.error);
+	dbgprintf("[RMTFS] dev_error %d => %d (%d:%d)\n", req.caller_id, resp.status, resp.result.result, resp.result.error);
 
 	len = qmi_encode_message(&resp_buf,
 				 QMI_RESPONSE, QMI_RMTFS_GET_DEV_ERROR, txn,
@@ -470,7 +475,7 @@ int main(int argc, char **argv)
 	if (!rmem)
 		return 1;
 
-	ret = storage_open(storage_root);
+	ret = storage_init(storage_root);
 	if (ret) {
 		fprintf(stderr, "failed to initialize storage system\n");
 		goto close_rmtfs_mem;
@@ -487,7 +492,7 @@ int main(int argc, char **argv)
 		ret = run_rmtfs();
 	} while (ret == -ENETRESET);
 
-	storage_close();
+	storage_exit();
 close_rmtfs_mem:
 	rmtfs_mem_close(rmem);
 

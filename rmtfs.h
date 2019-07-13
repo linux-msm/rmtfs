@@ -23,13 +23,16 @@ void rmtfs_mem_free(struct rmtfs_mem *rmem);
 ssize_t rmtfs_mem_read(struct rmtfs_mem *rmem, unsigned long phys_address, void *buf, ssize_t len);
 ssize_t rmtfs_mem_write(struct rmtfs_mem *rmem, unsigned long phys_address, const void *buf, ssize_t len);
 
-int storage_open(const char *storage_root);
-int storage_get(unsigned node, const char *path);
-int storage_put(unsigned node, int caller_id);
-int storage_get_handle(unsigned node, int caller_id);
-int storage_get_error(unsigned node, int caller_id);
-void storage_close(void);
-ssize_t storage_pread(int fildes, void *buf, size_t nbyte, off_t offset);
-ssize_t storage_pwrite(int fildes, const void *buf, size_t nbyte, off_t offset);
+struct rmtfd;
+
+int storage_init(const char *storage_root);
+struct rmtfd *storage_open(unsigned node, const char *path);
+struct rmtfd *storage_get(unsigned node, int caller_id);
+void storage_close(struct rmtfd *rmtfd);
+int storage_get_caller_id(const struct rmtfd *rmtfd);
+int storage_get_error(const struct rmtfd *rmtfd);
+void storage_exit(void);
+ssize_t storage_pread(const struct rmtfd *rmtfd, void *buf, size_t nbyte, off_t offset);
+ssize_t storage_pwrite(const struct rmtfd *rmtfd, const void *buf, size_t nbyte, off_t offset);
 
 #endif

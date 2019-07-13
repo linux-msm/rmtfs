@@ -34,7 +34,7 @@ static const struct partition partition_table[] = {
 
 static struct rmtfd rmtfds[MAX_CALLERS];
 
-int storage_open(const char *storage_root)
+int storage_init(const char *storage_root)
 {
 	int i;
 
@@ -49,7 +49,7 @@ int storage_open(const char *storage_root)
 	return 0;
 }
 
-int storage_get(unsigned node, const char *path)
+struct rmtfd *storage_open(unsigned node, const char *path)
 {
 	char *fspath;
 	const struct partition *part;
@@ -65,7 +65,7 @@ int storage_get(unsigned node, const char *path)
 	}
 
 	fprintf(stderr, "[RMTFS storage] request for unknown partition '%s', rejecting\n", path);
-	return -EPERM;
+	return NULL;
 
 found:
 	/* Check if this node already has the requested path open */
@@ -73,7 +73,7 @@ found:
 		if (rmtfds[i].fd != -1 &&
 		    rmtfds[i].node == node &&
 		    rmtfds[i].partition == part)
-			return rmtfds[i].id;
+			return &rmtfds[i];
 	}
 
 	for (i = 0; i < MAX_CALLERS; i++) {
@@ -84,7 +84,7 @@ found:
 	}
 	if (!rmtfd) {
 		fprintf(stderr, "[storage] out of free rmtfd handles\n");
-		return -EBUSY;
+		return NULL;
 	}
 
 	pathlen = strlen(storage_dir) + strlen(part->actual) + 2;
@@ -95,63 +95,49 @@ found:
 		saved_errno = errno;
 		fprintf(stderr, "[storage] failed to open '%s' (requested '%s'): %s\n",
 				fspath, part->path, strerror(saved_errno));
-		return -saved_errno;
+		errno = saved_errno;
+		return NULL;
 	}
 
 	rmtfd->node = node;
 	rmtfd->fd = fd;
 	rmtfd->partition = part;
 
-	return rmtfd->id;
+	return rmtfd;
 }
 
-int storage_put(unsigned node, int caller_id)
+void storage_close(struct rmtfd *rmtfd)
 {
-	struct rmtfd *rmtfd;
-
-	if (caller_id >= MAX_CALLERS)
-		return -EINVAL;
-
-	rmtfd = &rmtfds[caller_id];
-	if (rmtfd->node != node)
-		return -EINVAL;
-
 	close(rmtfd->fd);
 	rmtfd->fd = -1;
 	rmtfd->partition = NULL;
-
-	return 0;
 }
 
-int storage_get_handle(unsigned node, int caller_id)
+struct rmtfd *storage_get(unsigned node, int caller_id)
 {
 	struct rmtfd *rmtfd;
 
 	if (caller_id >= MAX_CALLERS)
-		return -EINVAL;
+		return NULL;
 
 	rmtfd = &rmtfds[caller_id];
 	if (rmtfd->node != node)
-		return -EINVAL;
+		return NULL;
 
-	return rmtfd->fd;
+	return rmtfd;
 }
 
-int storage_get_error(unsigned node, int caller_id)
+int storage_get_caller_id(const struct rmtfd *rmtfd)
 {
-	struct rmtfd *rmtfd;
+	return rmtfd->id;
+}
 
-	if (caller_id >= MAX_CALLERS)
-		return -EINVAL;
-
-	rmtfd = &rmtfds[caller_id];
-	if (rmtfd->node != node)
-		return -EINVAL;
-
+int storage_get_error(const struct rmtfd *rmtfd)
+{
 	return rmtfd->dev_error;
 }
 
-void storage_close(void)
+void storage_exit(void)
 {
 	int i;
 
@@ -161,13 +147,13 @@ void storage_close(void)
 	}
 }
 
-ssize_t storage_pread(int fildes, void *buf, size_t nbyte, off_t offset)
+ssize_t storage_pread(const struct rmtfd *rmtfd, void *buf, size_t nbyte, off_t offset)
 {
-	return pread(fildes, buf, nbyte, offset);
+	return pread(rmtfd->fd, buf, nbyte, offset);
 }
 
-ssize_t storage_pwrite(int fildes, const void *buf, size_t nbyte, off_t offset)
+ssize_t storage_pwrite(const struct rmtfd *rmtfd, const void *buf, size_t nbyte, off_t offset)
 {
-	return pwrite(fildes, buf, nbyte, offset);
+	return pwrite(rmtfd->fd, buf, nbyte, offset);
 }
 
