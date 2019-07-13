@@ -14,7 +14,7 @@ struct partition {
 	const char *actual;
 };
 
-struct caller {
+struct rmtfd {
 	unsigned id;
 	unsigned node;
 	int fd;
@@ -32,7 +32,7 @@ static const struct partition partition_table[] = {
 	{}
 };
 
-static struct caller caller_handles[MAX_CALLERS];
+static struct rmtfd rmtfds[MAX_CALLERS];
 
 int storage_open(const char *storage_root)
 {
@@ -42,8 +42,8 @@ int storage_open(const char *storage_root)
 		storage_dir = storage_root;
 
 	for (i = 0; i < MAX_CALLERS; i++) {
-		caller_handles[i].id = i;
-		caller_handles[i].fd = -1;
+		rmtfds[i].id = i;
+		rmtfds[i].fd = -1;
 	}
 
 	return 0;
@@ -53,7 +53,7 @@ int storage_get(unsigned node, const char *path)
 {
 	char *fspath;
 	const struct partition *part;
-	struct caller *caller = NULL;
+	struct rmtfd *rmtfd = NULL;
 	size_t pathlen;
 	int saved_errno;
 	int fd;
@@ -70,20 +70,20 @@ int storage_get(unsigned node, const char *path)
 found:
 	/* Check if this node already has the requested path open */
 	for (i = 0; i < MAX_CALLERS; i++) {
-		if (caller_handles[i].fd != -1 &&
-		    caller_handles[i].node == node &&
-		    caller_handles[i].partition == part)
-			return caller_handles[i].id;
+		if (rmtfds[i].fd != -1 &&
+		    rmtfds[i].node == node &&
+		    rmtfds[i].partition == part)
+			return rmtfds[i].id;
 	}
 
 	for (i = 0; i < MAX_CALLERS; i++) {
-		if (caller_handles[i].fd == -1) {
-			caller = &caller_handles[i];
+		if (rmtfds[i].fd == -1) {
+			rmtfd = &rmtfds[i];
 			break;
 		}
 	}
-	if (!caller) {
-		fprintf(stderr, "[storage] out of free caller handles\n");
+	if (!rmtfd) {
+		fprintf(stderr, "[storage] out of free rmtfd handles\n");
 		return -EBUSY;
 	}
 
@@ -98,57 +98,57 @@ found:
 		return -saved_errno;
 	}
 
-	caller->node = node;
-	caller->fd = fd;
-	caller->partition = part;
+	rmtfd->node = node;
+	rmtfd->fd = fd;
+	rmtfd->partition = part;
 
-	return caller->id;
+	return rmtfd->id;
 }
 
 int storage_put(unsigned node, int caller_id)
 {
-	struct caller *caller;
+	struct rmtfd *rmtfd;
 
 	if (caller_id >= MAX_CALLERS)
 		return -EINVAL;
 
-	caller = &caller_handles[caller_id];
-	if (caller->node != node)
+	rmtfd = &rmtfds[caller_id];
+	if (rmtfd->node != node)
 		return -EINVAL;
 
-	close(caller->fd);
-	caller->fd = -1;
-	caller->partition = NULL;
+	close(rmtfd->fd);
+	rmtfd->fd = -1;
+	rmtfd->partition = NULL;
 
 	return 0;
 }
 
 int storage_get_handle(unsigned node, int caller_id)
 {
-	struct caller *caller;
+	struct rmtfd *rmtfd;
 
 	if (caller_id >= MAX_CALLERS)
 		return -EINVAL;
 
-	caller = &caller_handles[caller_id];
-	if (caller->node != node)
+	rmtfd = &rmtfds[caller_id];
+	if (rmtfd->node != node)
 		return -EINVAL;
 
-	return caller->fd;
+	return rmtfd->fd;
 }
 
 int storage_get_error(unsigned node, int caller_id)
 {
-	struct caller *caller;
+	struct rmtfd *rmtfd;
 
 	if (caller_id >= MAX_CALLERS)
 		return -EINVAL;
 
-	caller = &caller_handles[caller_id];
-	if (caller->node != node)
+	rmtfd = &rmtfds[caller_id];
+	if (rmtfd->node != node)
 		return -EINVAL;
 
-	return caller->dev_error;
+	return rmtfd->dev_error;
 }
 
 void storage_close(void)
@@ -156,8 +156,8 @@ void storage_close(void)
 	int i;
 
 	for (i = 0; i < MAX_CALLERS; i++) {
-		if (caller_handles[i].fd >= 0)
-			close(caller_handles[i].fd);
+		if (rmtfds[i].fd >= 0)
+			close(rmtfds[i].fd);
 	}
 }
 
