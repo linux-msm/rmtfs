@@ -449,15 +449,21 @@ static int run_rmtfs(void)
 
 int main(int argc, char **argv)
 {
+	bool read_only = false;
 	int ret;
 	int option;
 	const char *storage_root = NULL;
 
-	while ((option = getopt(argc, argv, "o:v")) != -1) {
+	while ((option = getopt(argc, argv, "o:rv")) != -1) {
 		switch (option) {
 		/* -o sets the directory where EFS images are stored. */
 		case 'o':
 			storage_root = optarg;
+			break;
+
+		/* -r to avoid writing to storage */
+		case 'r':
+			read_only = true;
 			break;
 
 		/* -v is for verbose */
@@ -475,7 +481,7 @@ int main(int argc, char **argv)
 	if (!rmem)
 		return 1;
 
-	ret = storage_init(storage_root);
+	ret = storage_init(storage_root, read_only);
 	if (ret) {
 		fprintf(stderr, "failed to initialize storage system\n");
 		goto close_rmtfs_mem;

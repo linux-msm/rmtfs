@@ -25,7 +25,7 @@ ssize_t rmtfs_mem_write(struct rmtfs_mem *rmem, unsigned long phys_address, cons
 
 struct rmtfd;
 
-int storage_init(const char *storage_root);
+int storage_init(const char *storage_root, bool read_only);
 struct rmtfd *storage_open(unsigned node, const char *path);
 struct rmtfd *storage_get(unsigned node, int caller_id);
 void storage_close(struct rmtfd *rmtfd);
@@ -33,6 +33,6 @@ int storage_get_caller_id(const struct rmtfd *rmtfd);
 int storage_get_error(const struct rmtfd *rmtfd);
 void storage_exit(void);
 ssize_t storage_pread(const struct rmtfd *rmtfd, void *buf, size_t nbyte, off_t offset);
-ssize_t storage_pwrite(const struct rmtfd *rmtfd, const void *buf, size_t nbyte, off_t offset);
+ssize_t storage_pwrite(struct rmtfd *rmtfd, const void *buf, size_t nbyte, off_t offset);
 
 #endif
