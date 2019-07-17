@@ -11,11 +11,14 @@
 #define MAX_CALLERS 10
 #define STORAGE_MAX_SIZE (16 * 1024 * 1024)
 
+#define BY_PARTLABEL_PATH "/dev/disk/by-partlabel"
+
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 
 struct partition {
 	const char *path;
 	const char *actual;
+	const char *partlabel;
 };
 
 struct rmtfd {
@@ -31,12 +34,13 @@ struct rmtfd {
 
 static const char *storage_dir = "/boot";
 static int storage_read_only;
+static int storage_use_partitions;
 
 static const struct partition partition_table[] = {
-	{ "/boot/modem_fs1", "modem_fs1" },
-	{ "/boot/modem_fs2", "modem_fs2" },
-	{ "/boot/modem_fsc", "modem_fsc" },
-	{ "/boot/modem_fsg", "modem_fsg" },
+	{ "/boot/modem_fs1", "modem_fs1", "modemst1" },
+	{ "/boot/modem_fs2", "modem_fs2", "modemst2" },
+	{ "/boot/modem_fsc", "modem_fsc", "fsc" },
+	{ "/boot/modem_fsg", "modem_fsg", "fsg" },
 	{}
 };
 
@@ -44,12 +48,17 @@ static struct rmtfd rmtfds[MAX_CALLERS];
 
 static int storage_populate_shadow_buf(struct rmtfd *rmtfd, const char *file);
 
-int storage_init(const char *storage_root, bool read_only)
+int storage_init(const char *storage_root, bool read_only, bool use_partitions)
 {
 	int i;
 
 	if (storage_root)
 		storage_dir = storage_root;
+
+	if (use_partitions) {
+		storage_dir = BY_PARTLABEL_PATH;
+		storage_use_partitions = true;
+	}
 
 	storage_read_only = read_only;
 
@@ -66,6 +75,7 @@ struct rmtfd *storage_open(unsigned node, const char *path)
 	char *fspath;
 	const struct partition *part;
 	struct rmtfd *rmtfd = NULL;
+	const char *file;
 	size_t pathlen;
 	int saved_errno;
 	int ret;
@@ -100,9 +110,14 @@ found:
 		return NULL;
 	}
 
-	pathlen = strlen(storage_dir) + strlen(part->actual) + 2;
+	if (storage_use_partitions)
+		file = part->partlabel;
+	else
+		file = part->actual;
+
+	pathlen = strlen(storage_dir) + strlen(file) + 2;
 	fspath = alloca(pathlen);
-	snprintf(fspath, pathlen, "%s/%s", storage_dir, part->actual);
+	snprintf(fspath, pathlen, "%s/%s", storage_dir, file);
 	if (!storage_read_only) {
 		fd = open(fspath, O_RDWR);
 		if (fd < 0) {

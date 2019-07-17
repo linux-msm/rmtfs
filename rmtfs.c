@@ -449,16 +449,22 @@ static int run_rmtfs(void)
 
 int main(int argc, char **argv)
 {
+	bool use_partitions = false;
 	bool read_only = false;
 	int ret;
 	int option;
 	const char *storage_root = NULL;
 
-	while ((option = getopt(argc, argv, "o:rv")) != -1) {
+	while ((option = getopt(argc, argv, "o:Prv")) != -1) {
 		switch (option) {
 		/* -o sets the directory where EFS images are stored. */
 		case 'o':
 			storage_root = optarg;
+			break;
+
+		/* -P to find and use raw EFS partitions */
+		case 'P':
+			use_partitions = true;
 			break;
 
 		/* -r to avoid writing to storage */
@@ -481,7 +487,7 @@ int main(int argc, char **argv)
 	if (!rmem)
 		return 1;
 
-	ret = storage_init(storage_root, read_only);
+	ret = storage_init(storage_root, read_only, use_partitions);
 	if (ret) {
 		fprintf(stderr, "failed to initialize storage system\n");
 		goto close_rmtfs_mem;
