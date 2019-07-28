@@ -65,6 +65,7 @@ int storage_init(const char *storage_root, bool read_only, bool use_partitions)
 	for (i = 0; i < MAX_CALLERS; i++) {
 		rmtfds[i].id = i;
 		rmtfds[i].fd = -1;
+		rmtfds[i].shadow_buf = NULL;
 	}
 
 	return 0;
@@ -93,14 +94,14 @@ struct rmtfd *storage_open(unsigned node, const char *path)
 found:
 	/* Check if this node already has the requested path open */
 	for (i = 0; i < MAX_CALLERS; i++) {
-		if (rmtfds[i].fd != -1 &&
+		if ((rmtfds[i].fd != -1 || rmtfds[i].shadow_buf) &&
 		    rmtfds[i].node == node &&
 		    rmtfds[i].partition == part)
 			return &rmtfds[i];
 	}
 
 	for (i = 0; i < MAX_CALLERS; i++) {
-		if (rmtfds[i].fd == -1) {
+		if (rmtfds[i].fd == -1 && !rmtfds[i].shadow_buf) {
 			rmtfd = &rmtfds[i];
 			break;
 		}
