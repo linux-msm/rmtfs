@@ -6,6 +6,7 @@ After=qrtr-ns.service
 [Service]
 ExecStart=RMTFS_PATH/rmtfs -r -P -s
 Restart=always
+RestartSec=1
 
 [Install]
 WantedBy=multi-user.target
