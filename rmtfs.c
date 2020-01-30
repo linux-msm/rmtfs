@@ -517,6 +517,11 @@ int main(int argc, char **argv)
 		/* enable sync for the mss rproc instance */
 		case 's':
 			rprocfd = rproc_init();
+			if (rprocfd < 0) {
+				fprintf(stderr, "Failed to get rprocfd\n");
+				return 1;
+			}
+
 			break;
 
 		/* -v is for verbose */
