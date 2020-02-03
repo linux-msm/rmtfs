@@ -11,7 +11,11 @@
 #define MAX_CALLERS 10
 #define STORAGE_MAX_SIZE (16 * 1024 * 1024)
 
+#ifndef ANDROID
 #define BY_PARTLABEL_PATH "/dev/disk/by-partlabel"
+#else
+#define BY_PARTLABEL_PATH "/dev/block/by-name"
+#endif
 
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 

@@ -1,0 +1,13 @@
+cc_binary {
+    name: "rmtfs",
+    vendor: true,
+    srcs: [
+        "qmi_rmtfs.c",
+        "rmtfs.c",
+        "rproc.c",
+        "sharedmem.c",
+        "storage.c",
+        "util.c",
+    ],
+    shared_libs: ["libqrtr"],
+}

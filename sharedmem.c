@@ -4,7 +4,11 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#ifndef ANDROID
 #include <libudev.h>
+#else
+#include <sys/endian.h>
+#endif
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,6 +25,8 @@ struct rmtfs_mem {
 	void *base;
 	int fd;
 };
+
+#ifndef ANDROID
 
 static int parse_hex_sysattr(struct udev_device *dev, const char *name,
 			     uint64_t *value)
@@ -190,6 +196,65 @@ err_close_fd:
 	close(fd);
 	return -saved_errno;
 }
+
+#else
+
+#define PAGE_SIZE 4096
+
+static int rmtfs_mem_open_rfsa(struct rmtfs_mem *rmem, int client_id)
+{
+	int saved_errno;
+	int fd;
+	char path[PATH_MAX];
+	char val[PAGE_SIZE];
+	char *endptr;
+
+	errno = 0;
+
+	snprintf(path, sizeof(path), "/sys/class/rmtfs/qcom_rmtfs_mem%d/phys_addr", client_id);
+	fd = open(path, O_RDONLY);
+	if (fd < 0) {
+		saved_errno = errno;
+		fprintf(stderr, "failed to open %s: %s\n", path, strerror(errno));
+		return -saved_errno;
+	}
+	read(fd, val, sizeof(val));
+	rmem->address = strtoull(val, &endptr, 16);
+	if ((rmem->address == ULLONG_MAX && errno == ERANGE) || endptr == val) {
+		saved_errno = errno;
+		goto err_close_fd;
+	}
+	close(fd);
+
+	snprintf(path, sizeof(path), "/sys/class/rmtfs/qcom_rmtfs_mem%d/size", client_id);
+	fd = open(path, O_RDONLY);
+	if (fd < 0) {
+		saved_errno = errno;
+		fprintf(stderr, "failed to open %s: %s\n", path, strerror(errno));
+		return -saved_errno;
+	}
+	read(fd, val, sizeof(val));
+	rmem->size = strtoull(val, &endptr, 16);
+	if ((rmem->size == ULLONG_MAX && errno == ERANGE) || endptr == val) {
+		saved_errno = errno;
+		goto err_close_fd;
+	}
+	close(fd);
+
+	return 0;
+
+err_close_fd:
+	close(fd);
+	return -saved_errno;
+}
+
+static int rmtfs_mem_open_uio(struct rmtfs_mem *rmem, int client_id)
+{
+	fprintf(stderr, "uio access is not supported on ANDROID yet\n");
+	return -EINVAL;
+}
+
+#endif
 
 struct rmtfs_mem *rmtfs_mem_open(void)
 {
