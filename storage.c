@@ -11,11 +11,7 @@
 #define MAX_CALLERS 10
 #define STORAGE_MAX_SIZE (16 * 1024 * 1024)
 
-#ifndef ANDROID
 #define BY_PARTLABEL_PATH "/dev/disk/by-partlabel"
-#else
-#define BY_PARTLABEL_PATH "/dev/block/by-name"
-#endif
 
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 
@@ -60,7 +56,8 @@ int storage_init(const char *storage_root, bool read_only, bool use_partitions)
 		storage_dir = storage_root;
 
 	if (use_partitions) {
-		storage_dir = BY_PARTLABEL_PATH;
+		if (!storage_root)
+			storage_dir = BY_PARTLABEL_PATH;
 		storage_use_partitions = true;
 	}
 

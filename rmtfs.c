@@ -499,7 +499,11 @@ int main(int argc, char **argv)
 
 	while ((option = getopt(argc, argv, "o:Prsv")) != -1) {
 		switch (option) {
-		/* -o sets the directory where EFS images are stored. */
+		/*
+		 * -o sets the directory where EFS images are stored,
+		 * or sets the directory from where raw EFS partitions
+		 * can be picked by-name when used with -P option.
+		 */
 		case 'o':
 			storage_root = optarg;
 			break;
