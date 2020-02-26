@@ -256,7 +256,7 @@ err_close_fd:
 	return -saved_errno;
 }
 
-static int rmtfs_mem_open_uio(struct rmtfs_mem *rmem, int client_id)
+static int rmtfs_mem_open_uio(struct rmtfs_mem *rmem __unused, int client_id __unused)
 {
 	fprintf(stderr, "uio access is not supported on ANDROID yet\n");
 	return -EINVAL;
@@ -330,7 +330,7 @@ int64_t rmtfs_mem_alloc(struct rmtfs_mem *rmem, size_t alloc_size)
 	return rmem->address;
 }
 
-void rmtfs_mem_free(struct rmtfs_mem *rmem)
+void rmtfs_mem_free(struct rmtfs_mem *rmem __unused)
 {
 }
 

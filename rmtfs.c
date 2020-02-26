@@ -482,7 +482,7 @@ static int run_rmtfs(int rprocfd)
 	return ret;
 }
 
-static void sig_int_handler(int signo)
+static void sig_int_handler(int signo __unused)
 {
 	sig_int_count++;
 }

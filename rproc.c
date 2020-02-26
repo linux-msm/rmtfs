@@ -98,7 +98,7 @@ int rproc_init(void)
 	return rproc_pipe[0];
 }
 
-static void *do_rproc_start(void *unused)
+static void *do_rproc_start(void *unused __unused)
 {
 	ssize_t ret;
 
@@ -114,7 +114,7 @@ int rproc_start()
 	return pthread_create(&start_thread, NULL, do_rproc_start, NULL);
 }
 
-static void *do_rproc_stop(void *unused)
+static void *do_rproc_stop(void *unused __unused)
 {
 	ssize_t ret;
 
