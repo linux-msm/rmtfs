@@ -203,13 +203,13 @@ ssize_t storage_pread(const struct rmtfd *rmtfd, void *buf, size_t nbyte, off_t 
 	} else {
 		n = MIN(nbyte, rmtfd->shadow_len - offset);
 		if (n > 0)
-			memcpy(buf, rmtfd->shadow_buf + offset, n);
+			memcpy(buf, (char*)rmtfd->shadow_buf + offset, n);
 		else
 			n = 0;
 	}
 
 	if (n < nbyte)
-		memset(buf + n, 0, nbyte - n);
+		memset((char*)buf + n, 0, nbyte - n);
 
 	return nbyte;
 }
@@ -239,7 +239,7 @@ ssize_t storage_pwrite(struct rmtfd *rmtfd, const void *buf, size_t nbyte, off_t
 		rmtfd->shadow_len = new_len;
 	}
 
-	memcpy(rmtfd->shadow_buf + offset, buf, nbyte);
+	memcpy((char*)rmtfd->shadow_buf + offset, buf, nbyte);
 
 	return nbyte;
 }
