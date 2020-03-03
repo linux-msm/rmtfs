@@ -348,7 +348,7 @@ static void *rmtfs_mem_ptr(struct rmtfs_mem *rmem, unsigned long phys_address, s
 	if (start < rmem->address || end > rmem->address + rmem->size)
 		return NULL;
 
-	return rmem->base + phys_address - rmem->address;
+	return (char*)rmem->base + phys_address - rmem->address;
 }
 
 ssize_t rmtfs_mem_read(struct rmtfs_mem *rmem, unsigned long phys_address, void *buf, ssize_t len)
