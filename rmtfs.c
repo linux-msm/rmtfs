@@ -445,7 +445,10 @@ static int run_rmtfs(int rprocfd)
 		rproc_start();
 
 	for (;;) {
-		if (rprocfd >= 0 && sig_int_count == 1 && !sig_int_handled) {
+		if (sig_int_count == 1 && !sig_int_handled) {
+			if (rprocfd < 0)
+				break;
+
 			rproc_stop();
 			sig_int_handled = true;
 		} else if (sig_int_count > 1) {
