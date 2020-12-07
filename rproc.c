@@ -187,7 +187,12 @@ static void *do_rproc_start(void *unused)
 
 int rproc_start()
 {
-	return pthread_create(&start_thread, NULL, do_rproc_start, NULL);
+	pthread_attr_t attr;
+
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+	return pthread_create(&start_thread, &attr, do_rproc_start, NULL);
 }
 
 static void *do_rproc_stop(void *unused)
@@ -211,5 +216,10 @@ static void *do_rproc_stop(void *unused)
 
 int rproc_stop(void)
 {
-	return pthread_create(&stop_thread, NULL, do_rproc_stop, NULL);
+	pthread_attr_t attr;
+
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+	return pthread_create(&stop_thread, &attr, do_rproc_stop, NULL);
 }
