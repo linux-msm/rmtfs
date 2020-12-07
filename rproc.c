@@ -176,8 +176,10 @@ static void *do_rproc_start(void *unused)
 	ssize_t ret;
 
 	ret = pwrite(rproc_state_fd, "start", 5, 0);
-	if (ret < 4)
-		fprintf(stderr, "failed to update start state\n");
+	if (ret < 4) {
+		fprintf(stderr, "failed to update start state: %s\n",
+			strerror(errno));
+	}
 
 	return NULL;
 }
@@ -192,8 +194,10 @@ static void *do_rproc_stop(void *unused)
 	ssize_t ret;
 
 	ret = pwrite(rproc_state_fd, "stop", 4, 0);
-	if (ret < 4)
-		fprintf(stderr, "failed to update stop state\n");
+	if (ret < 4) {
+		fprintf(stderr, "failed to update stop state: %s\n",
+			strerror(errno));
+	}
 
 	ret = write(rproc_pipe[1], "Y", 1);
 	if (ret != 1) {
