@@ -151,8 +151,10 @@ found:
 
 void storage_close(struct rmtfd *rmtfd)
 {
-	close(rmtfd->fd);
-	rmtfd->fd = -1;
+	if (rmtfd->fd >= 0) {
+		close(rmtfd->fd);
+		rmtfd->fd = -1;
+	}
 
 	free(rmtfd->shadow_buf);
 	rmtfd->shadow_buf = NULL;
@@ -189,10 +191,8 @@ void storage_exit(void)
 {
 	int i;
 
-	for (i = 0; i < MAX_CALLERS; i++) {
-		if (rmtfds[i].fd >= 0)
-			close(rmtfds[i].fd);
-	}
+	for (i = 0; i < MAX_CALLERS; i++)
+		storage_close(&rmtfds[i]);
 }
 
 ssize_t storage_pread(const struct rmtfd *rmtfd, void *buf, size_t nbyte, off_t offset)
