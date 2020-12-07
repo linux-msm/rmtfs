@@ -55,9 +55,10 @@ static int rproc_init_by_modalias(void)
 		if (modalias_fd < 0)
 			goto close_rproc_fd;
 
-		ret = read(modalias_fd, modalias, sizeof(modalias));
+		ret = read(modalias_fd, modalias, sizeof(modalias) - 1);
 		if (ret < 0)
 			goto close_modalias_fd;
+		modalias[ret] = '\0';
 
 		if (!strstr(modalias, "-mpss-pas") && !strstr(modalias, "-mss-pil"))
 			goto close_modalias_fd;
