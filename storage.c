@@ -122,7 +122,7 @@ found:
 	fspath = alloca(pathlen);
 	snprintf(fspath, pathlen, "%s/%s", storage_dir, file);
 	if (!storage_read_only) {
-		fd = open(fspath, O_RDWR);
+		fd = open(fspath, O_RDWR | O_SYNC);
 		if (fd < 0) {
 			saved_errno = errno;
 			fprintf(stderr, "[storage] failed to open '%s' (requested '%s'): %s\n",
