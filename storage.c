@@ -122,7 +122,7 @@ found:
 	fspath = alloca(pathlen);
 	snprintf(fspath, pathlen, "%s/%s", storage_dir, file);
 	if (!storage_read_only) {
-		fd = open(fspath, O_RDWR | O_SYNC);
+		fd = open(fspath, O_RDWR);
 		if (fd < 0) {
 			saved_errno = errno;
 			fprintf(stderr, "[storage] failed to open '%s' (requested '%s'): %s\n",
@@ -243,6 +243,14 @@ ssize_t storage_pwrite(struct rmtfd *rmtfd, const void *buf, size_t nbyte, off_t
 	memcpy((char*)rmtfd->shadow_buf + offset, buf, nbyte);
 
 	return nbyte;
+}
+
+int storage_sync(struct rmtfd *rmtfd)
+{
+	if (storage_read_only)
+		return 0;
+	
+	return fdatasync(rmtfd->fd);
 }
 
 static int storage_populate_shadow_buf(struct rmtfd *rmtfd, const char *file)
