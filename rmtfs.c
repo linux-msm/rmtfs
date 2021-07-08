@@ -220,6 +220,10 @@ static void rmtfs_iovec(int sock, struct qrtr_packet *pkt)
 respond:
 	dbgprintf("[RMTFS] iovec %d, %sforced => (%d:%d)\n", caller_id, force ? "" : "not ",
 							     resp.result.result, resp.result.error);
+
+	if (is_write)
+		storage_sync(rmtfd);
+
 	for (i = 0; i < num_entries; i++) {
 		dbgprintf("[RMTFS]       %s %d:%d 0x%x\n", is_write ? "write" : "read",
 							   entries[i].sector_addr,
