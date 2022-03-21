@@ -202,7 +202,7 @@ ssize_t storage_pread(const struct rmtfd *rmtfd, void *buf, size_t nbyte, off_t 
 	if (!storage_read_only) {
 		n = pread(rmtfd->fd, buf, nbyte, offset);
 	} else {
-		n = MIN(nbyte, rmtfd->shadow_len - offset);
+		n = MIN((ssize_t)nbyte, (ssize_t)rmtfd->shadow_len - offset);
 		if (n > 0)
 			memcpy(buf, (char*)rmtfd->shadow_buf + offset, n);
 		else
