@@ -418,7 +418,7 @@ static int rmtfs_mem_enumerate(struct rmtfs_mem *rmem)
 	if (!dir) {
 		fprintf(stderr,
 			"Unable to open reserved-memory device tree node: %s\n",
-			strerror(-errno));
+			strerror(errno));
 		close(basefd);
 		return -1;
 	}
@@ -430,7 +430,7 @@ static int rmtfs_mem_enumerate(struct rmtfs_mem *rmem)
 		dirfd = openat(basefd, de->d_name, O_DIRECTORY);
 		if (dirfd < 0) {
 			fprintf(stderr, "failed to open %s: %s\n",
-				de->d_name, strerror(-errno));
+				de->d_name, strerror(errno));
 			ret = -1;
 			goto out;
 		}
@@ -438,7 +438,7 @@ static int rmtfs_mem_enumerate(struct rmtfs_mem *rmem)
 		regfd = openat(dirfd, "reg", O_RDONLY);
 		if (regfd < 0) {
 			fprintf(stderr, "failed to open reg of %s: %s\n",
-				de->d_name, strerror(-errno));
+				de->d_name, strerror(errno));
 			ret = -1;
 			goto out;
 		}
@@ -452,7 +452,7 @@ static int rmtfs_mem_enumerate(struct rmtfs_mem *rmem)
 			rmem->size = be64toh(reg.qw[1]);
 		} else {
 			fprintf(stderr, "failed to read reg of %s: %s\n",
-				de->d_name, strerror(-errno));
+				de->d_name, strerror(errno));
 			ret = -1;
 		}
 
