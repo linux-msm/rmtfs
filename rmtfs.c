@@ -151,11 +151,11 @@ static void rmtfs_iovec(int sock, struct qrtr_packet *pkt)
 	struct rmtfs_iovec_resp resp = {};
 	struct rmtfs_iovec_req req = {};
 	DEFINE_QRTR_PACKET(resp_buf, 256);
-	struct rmtfd *rmtfd;
+	struct rmtfd *rmtfd = NULL;
 	uint32_t caller_id = 0;
 	size_t num_entries = 0;
 	off_t sector_base;
-	uint8_t is_write;
+	uint8_t is_write = 0;
 	off_t phys_base;
 	uint8_t force = 0;
 	unsigned txn;
