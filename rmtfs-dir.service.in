@@ -1,5 +1,6 @@
 [Unit]
 Description=Qualcomm remotefs service
+Before=NetworkManager.service
 
 [Service]
 ExecStart=RMTFS_PATH/rmtfs -s -o RMTFS_EFS_PATH
