@@ -4,6 +4,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #ifndef ANDROID
 #include <libudev.h>
 #else
@@ -322,7 +323,7 @@ int64_t rmtfs_mem_alloc(struct rmtfs_mem *rmem, size_t alloc_size)
 {
 	if (alloc_size > rmem->size) {
 		fprintf(stderr,
-			"[RMTFS] rmtfs shared memory not large enough for allocation request 0x%zx vs 0x%lx\n",
+			"[RMTFS] rmtfs shared memory not large enough for allocation request 0x%zx vs %" PRIu64 "\n",
 			alloc_size, rmem->size);
 		return -EINVAL;
 	}
