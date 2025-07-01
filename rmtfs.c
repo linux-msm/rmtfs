@@ -27,6 +27,7 @@
 
 static struct rmtfs_mem *rmem;
 static sig_atomic_t sig_int_count;
+static char slot_suffix[SLOT_SUFFIX_LEN];
 
 static bool dbgprintf_enabled;
 static void dbgprintf(const char *fmt, ...)
@@ -69,7 +70,7 @@ static void rmtfs_open(int sock, const struct qrtr_packet *pkt)
 		goto respond;
 	}
 
-	rmtfd = storage_open(pkt->node, req.path);
+	rmtfd = storage_open(pkt->node, req.path, slot_suffix);
 	if (!rmtfd) {
 		qmi_result_error(&resp.result, QMI_RMTFS_ERR_INTERNAL);
 		goto respond;
@@ -504,7 +505,7 @@ int main(int argc, char **argv)
 	int option;
 	const char *storage_root = NULL;
 
-	while ((option = getopt(argc, argv, "o:Prsv")) != -1) {
+	while ((option = getopt(argc, argv, "oS:Prsv")) != -1) {
 		switch (option) {
 		/*
 		 * -o sets the directory where EFS images are stored,
@@ -533,6 +534,20 @@ int main(int argc, char **argv)
 				return 1;
 			}
 
+			break;
+
+		/* Partlabel slot suffix on A/B devices */
+		case 'S':
+			if (strnlen(optarg, 1 + 1) != 1) {
+				fprintf(stderr, "Couldn't parse slot name (too long?)\n");
+				return -1;
+			}
+
+			ret = snprintf(slot_suffix, SLOT_SUFFIX_LEN, "_%s", optarg);
+			if (ret != SLOT_SUFFIX_LEN - 1)
+				return -1;
+
+			dbgprintf("Using slot %s\n", slot_suffix);
 			break;
 
 		/* -v is for verbose */

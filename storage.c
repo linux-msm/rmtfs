@@ -74,16 +74,43 @@ int storage_init(const char *storage_root, bool read_only, bool use_partitions)
 	return 0;
 }
 
-struct rmtfd *storage_open(unsigned node, const char *path)
+static int fd_open(struct rmtfd *rmtfd, const char *fspath, const struct partition *part)
+{
+	int saved_errno;
+	int ret;
+	int fd;
+
+	if (!storage_read_only) {
+		fd = open(fspath, O_RDWR);
+		if (fd < 0) {
+			saved_errno = errno;
+			fprintf(stderr, "[storage] failed to open '%s' (requested '%s'): %s\n",
+					fspath, part->path, strerror(saved_errno));
+			return saved_errno;
+		}
+		rmtfd->fd = fd;
+		rmtfd->shadow_len = 0;
+	} else {
+		ret = storage_populate_shadow_buf(rmtfd, fspath);
+		if (ret < 0) {
+			saved_errno = errno;
+			fprintf(stderr, "[storage] failed to open '%s' (requested '%s'): %s\n",
+					fspath, part->path, strerror(saved_errno));
+			return saved_errno;
+		}
+	}
+
+	return 0;
+}
+
+struct rmtfd *storage_open(unsigned node, const char *path, const char *slot_suffix)
 {
 	char *fspath;
 	const struct partition *part;
 	struct rmtfd *rmtfd = NULL;
 	const char *file;
 	size_t pathlen;
-	int saved_errno;
 	int ret;
-	int fd;
 	int i;
 
 	for (part = partition_table; part->path; part++) {
@@ -119,29 +146,19 @@ found:
 	else
 		file = part->actual;
 
-	pathlen = strlen(storage_dir) + strlen(file) + 2;
+	pathlen = strlen(storage_dir) + strlen(file) + 2 + strnlen(slot_suffix, SLOT_SUFFIX_LEN);
 	fspath = alloca(pathlen);
 	snprintf(fspath, pathlen, "%s/%s", storage_dir, file);
-	if (!storage_read_only) {
-		fd = open(fspath, O_RDWR);
-		if (fd < 0) {
-			saved_errno = errno;
-			fprintf(stderr, "[storage] failed to open '%s' (requested '%s'): %s\n",
-					fspath, part->path, strerror(saved_errno));
-			errno = saved_errno;
+	ret = fd_open(rmtfd, fspath, part);
+	if (ret) {
+		/* Try again with the slot suffix before giving up */
+		if (!slot_suffix)
 			return NULL;
-		}
-		rmtfd->fd = fd;
-		rmtfd->shadow_len = 0;
-	} else {
-		ret = storage_populate_shadow_buf(rmtfd, fspath);
-		if (ret < 0) {
-			saved_errno = errno;
-			fprintf(stderr, "[storage] failed to open '%s' (requested '%s'): %s\n",
-					fspath, part->path, strerror(saved_errno));
-			errno = saved_errno;
+
+		snprintf(fspath, pathlen, "%s/%s%s", storage_dir, file, slot_suffix);
+		ret = fd_open(rmtfd, fspath, part);
+		if (ret)
 			return NULL;
-		}
 	}
 
 	rmtfd->node = node;
