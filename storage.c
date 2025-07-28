@@ -41,6 +41,7 @@ static const struct partition partition_table[] = {
 	{ "/boot/modem_fs2", "modem_fs2", "modemst2" },
 	{ "/boot/modem_fsc", "modem_fsc", "fsc" },
 	{ "/boot/modem_fsg", "modem_fsg", "fsg" },
+	{ "/boot/modem_study", "modem_study", "study" },
 	{ "/boot/modem_tunning", "modem_tunning", "tunning" },
 	{ "/boot/modem_tng", "modem_tng", "tunning" },
 	{}
