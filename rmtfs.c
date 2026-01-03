@@ -505,7 +505,7 @@ int main(int argc, char **argv)
 	int option;
 	const char *storage_root = NULL;
 
-	while ((option = getopt(argc, argv, "oS:Prsv")) != -1) {
+	while ((option = getopt(argc, argv, "o:S:Prsv")) != -1) {
 		switch (option) {
 		/*
 		 * -o sets the directory where EFS images are stored,
