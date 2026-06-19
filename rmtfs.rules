@@ -1,0 +1,10 @@
+# Trigger rmtfs.service when the qcom_rmtfs_mem device node appears.
+#
+# /dev/qcom_rmtfs_mem* is created by the rmtfs-mem kernel module when the
+# modem shared-memory region is probed.  The exact boot time at which this
+# happens depends on whether the module is built-in or loaded as a module and
+# on the systemd target ordering, so a static ConditionPathExists check in the
+# service unit is not sufficient – the service must be (re-)triggered by udev
+# whenever the device shows up.
+
+ACTION=="add", KERNEL=="qcom_rmtfs_mem*", TAG+="systemd", ENV{SYSTEMD_WANTS}+="rmtfs.service"
