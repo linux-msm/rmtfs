@@ -1,5 +1,6 @@
 [Unit]
 Description=Qualcomm remotefs service
+Before=ModemManager.service
 Before=NetworkManager.service
 ConditionPathExists=/dev/qcom_rmtfs_mem1
 
