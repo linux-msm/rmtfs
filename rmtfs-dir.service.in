@@ -1,6 +1,8 @@
 [Unit]
 Description=Qualcomm remotefs service
 Before=NetworkManager.service
+ConditionFirmware=!device-tree-compatible(qcom,sdm670)
+ConditionFirmware=!device-tree-compatible(qcom,sdm845)
 
 [Service]
 ExecStart=RMTFS_PATH/rmtfs -s -o RMTFS_EFS_PATH
