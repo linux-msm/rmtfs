@@ -335,21 +335,29 @@ void rmtfs_mem_free(struct rmtfs_mem *rmem)
 {
 }
 
-static void *rmtfs_mem_ptr(struct rmtfs_mem *rmem, unsigned long phys_address, ssize_t len)
+static int rmtfs_mem_offset(struct rmtfs_mem *rmem, unsigned long phys_address,
+			    ssize_t len, off_t *offset)
 {
-	uint64_t start;
-	uint64_t end;
+	uint64_t relative;
 
 	if (len < 0)
-		return NULL;
+		return -EINVAL;
 
-	start = phys_address;
-	end = start + len;
+	/* physical address or offset */
+	if (phys_address <= rmem->size && (uint64_t)len <= rmem->size - phys_address) {
+		*offset = phys_address;
+		return 0;
+	}
 
-	if (start < rmem->address || end > rmem->address + rmem->size)
-		return NULL;
+	if (phys_address < rmem->address)
+		return -EINVAL;
 
-	return (char*)rmem->base + phys_address - rmem->address;
+	relative = phys_address - rmem->address;
+	if (relative > rmem->size || (uint64_t)len > rmem->size - relative)
+		return -EINVAL;
+
+	*offset = relative;
+	return 0;
 }
 
 ssize_t rmtfs_mem_read(struct rmtfs_mem *rmem, unsigned long phys_address, void *buf, ssize_t len)
@@ -357,14 +365,13 @@ ssize_t rmtfs_mem_read(struct rmtfs_mem *rmem, unsigned long phys_address, void 
 	off_t offset;
 	void *ptr;
 
-	if (rmem->base) {
-		ptr = rmtfs_mem_ptr(rmem, phys_address, len);
-		if (!ptr)
-			return -EINVAL;
+	if (rmtfs_mem_offset(rmem, phys_address, len, &offset))
+		return -EINVAL;
 
+	if (rmem->base) {
+		ptr = (char *)rmem->base + offset;
 		memcpy(buf, ptr, len);
 	} else {
-		offset = phys_address - rmem->address;
 		len = pread(rmem->fd, buf, len, offset);
 	}
 
@@ -376,14 +383,13 @@ ssize_t rmtfs_mem_write(struct rmtfs_mem *rmem, unsigned long phys_address, cons
 	off_t offset;
 	void *ptr;
 
-	if (rmem->base) {
-		ptr = rmtfs_mem_ptr(rmem, phys_address, len);
-		if (!ptr)
-			return -EINVAL;
+	if (rmtfs_mem_offset(rmem, phys_address, len, &offset))
+		return -EINVAL;
 
+	if (rmem->base) {
+		ptr = (char *)rmem->base + offset;
 		memcpy(ptr, buf, len);
 	} else {
-		offset = phys_address - rmem->address;
 		len = pwrite(rmem->fd, buf, len, offset);
 	}
 
