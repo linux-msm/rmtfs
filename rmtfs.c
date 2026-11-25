@@ -316,7 +316,7 @@ static void rmtfs_get_dev_error(int sock, struct qrtr_packet *pkt)
 	}
 
 	rmtfd = storage_get(pkt->node, req.caller_id);
-	if (rmtfd) {
+	if (!rmtfd) {
 		qmi_result_error(&resp.result, QMI_RMTFS_ERR_INTERNAL);
 		goto respond;
 	}
