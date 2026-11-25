@@ -180,11 +180,17 @@ void storage_close(struct rmtfd *rmtfd)
 		rmtfd->fd = -1;
 	}
 
-	free(rmtfd->shadow_buf);
-	rmtfd->shadow_buf = NULL;
-	rmtfd->shadow_len = 0;
-
-	rmtfd->partition = NULL;
+	/*
+	 * In read-only mode the shadow buffer holds every write of the remote:
+	 * keep it so that a later open of the same partition sees them, as it
+	 * would on real storage. It is released in storage_exit().
+	 */
+	if (!storage_read_only) {
+		free(rmtfd->shadow_buf);
+		rmtfd->shadow_buf = NULL;
+		rmtfd->shadow_len = 0;
+		rmtfd->partition = NULL;
+	}
 }
 
 struct rmtfd *storage_get(unsigned node, int caller_id)
@@ -215,8 +221,12 @@ void storage_exit(void)
 {
 	int i;
 
-	for (i = 0; i < MAX_CALLERS; i++)
+	for (i = 0; i < MAX_CALLERS; i++) {
 		storage_close(&rmtfds[i]);
+		free(rmtfds[i].shadow_buf);
+		rmtfds[i].shadow_buf = NULL;
+		rmtfds[i].shadow_len = 0;
+	}
 }
 
 ssize_t storage_pread(const struct rmtfd *rmtfd, void *buf, size_t nbyte, off_t offset)
